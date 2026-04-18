@@ -1,0 +1,1060 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  STAFF
+  VENDOR
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  FAILED
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  FLUTTERWAVE
+}
+
+enum PaymentAttemptStatus {
+  SUCCESS
+  FAILED
+}
+
+enum CartStatus {
+  ACTIVE
+  CHECKED_OUT
+  ABANDONED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum NotificationType {
+  ORDER_CONFIRMED
+  ORDER_PREPARING
+  ORDER_READY
+  ORDER_OUT_FOR_DELIVERY
+  ORDER_DELIVERED
+  PAYMENT_FAILED
+}
+
+enum IdempotencyStatus {
+  STARTED
+  COMPLETED
+  FAILED
+}
+
+enum DomainEventStatus {
+  PENDING
+  PROCESSING
+  FAILED
+  COMPLETED
+  DEAD
+}
+
+enum TaxModel {
+  VAT
+  GST
+  SALES_TAX
+}
+
+enum ServiceMode {
+  DINE_IN
+  PICKUP
+  DELIVERY
+}
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+  EXPIRE
+  ADJUST
+  REFERRAL_BONUS
+}
+
+enum RewardType {
+  DISCOUNT_PERCENT
+  DISCOUNT_AMOUNT
+  FREE_ITEM
+}
+
+enum RewardRedemptionStatus {
+  RESERVED
+  REDEEMED
+  CANCELLED
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  REWARDED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  isGuest       Boolean   @default(false)
+  role          UserRole  @default(CUSTOMER)
+  locale        String    @default("en")
+  referralCode  String?   @unique
+  accounts      Account[]
+  sessions      Session[]
+  carts         Cart[]
+  orders        Order[]
+  refreshTokens RefreshToken[]
+  passwordResets PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+  notificationPreferences NotificationPreference[]
+  notificationLogs NotificationLog[]
+  addresses     Address[]
+  reviews       Review[]
+  loyaltyAccount LoyaltyAccount?
+  referralsSent  Referral[] @relation("ReferralSender")
+  referralReceived Referral? @relation("ReferralRecipient")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  replacedBy String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  title       String
+  description String?
+  isActive    Boolean          @default(true)
+  variants    ProductVariant[]
+  categories  ProductCategory[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  parentId  String?
+  parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  products  ProductCategory[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+}
+
+model ProductVariant {
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  sku          String   @unique
+  title        String?
+  baseAmountMinor Int
+  baseCurrency String   @default("NGN")
+  stockOnHand  Int      @default(0)
+  stockReserved Int     @default(0)
+  isActive     Boolean  @default(true)
+  version      Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  prices       ProductPrice[]
+  inventoryMenuItems MenuItem[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  reservations StockReservation[]
+}
+
+model MenuItem {
+  id                  String   @id @default(cuid())
+  menuId              String
+  menu                Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  slug                String   @unique
+  title               String
+  description         String?
+  imageUrl            String?
+  baseAmountMinor     Int
+  baseCurrency        String   @default("NGN")
+  isAvailable         Boolean  @default(true)
+  preparationTimeMins Int?
+  inventoryProductVariantId String?
+  inventoryProductVariant   ProductVariant? @relation(fields: [inventoryProductVariantId], references: [id])
+  categories          MenuItemCategory[]
+  modifierGroups      MenuItemModifierGroup[]
+  availability        MenuAvailability[]
+  variants            MenuItemVariant[]
+  prices              MenuItemPrice[]
+  cartItems           CartItem[]
+  orderItems          OrderItem[]
+  reviews             Review[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, menuItemId])
+  @@index([menuItemId])
+  @@index([userId])
+}
+
+model Menu {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean        @default(true)
+  locations   MenuLocation[]
+  categories  MenuCategory[]
+  items       MenuItem[]
+  modifierGroups ModifierGroup[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model MenuLocation {
+  id        String   @id @default(cuid())
+  menuId    String
+  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  code      String
+  name      String
+  isActive  Boolean  @default(true)
+  availabilities MenuAvailability[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([menuId, code])
+}
+
+model MenuCategory {
+  id        String        @id @default(cuid())
+  menuId    String
+  menu      Menu          @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  slug      String
+  name      String
+  description String?
+  displayOrder Int     @default(0)
+  isActive  Boolean        @default(true)
+  parentId  String?
+  parent    MenuCategory? @relation("MenuCategoryHierarchy", fields: [parentId], references: [id])
+  children  MenuCategory[] @relation("MenuCategoryHierarchy")
+  items     MenuItemCategory[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([menuId, slug])
+  @@index([menuId])
+}
+
+model MenuItemCategory {
+  menuItemId    String
+  menuCategoryId String
+  menuItem      MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuCategory  MenuCategory @relation(fields: [menuCategoryId], references: [id], onDelete: Cascade)
+
+  @@id([menuItemId, menuCategoryId])
+  @@index([menuCategoryId])
+}
+
+model MenuAvailability {
+  id          String   @id @default(cuid())
+  menuItemId  String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  locationId  String?
+  location    MenuLocation? @relation(fields: [locationId], references: [id])
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  timezone    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([menuItemId])
+  @@index([locationId])
+}
+
+model ModifierGroup {
+  id           String   @id @default(cuid())
+  menuId       String
+  menu         Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  name         String
+  minSelect    Int      @default(0)
+  maxSelect    Int      @default(1)
+  isRequired   Boolean  @default(false)
+  options      ModifierOption[]
+  menuItems    MenuItemModifierGroup[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([menuId])
+}
+
+model ModifierOption {
+  id              String   @id @default(cuid())
+  modifierGroupId String
+  modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+  name            String
+  baseAmountMinor Int      @default(0)
+  baseCurrency    String   @default("NGN")
+  isActive        Boolean  @default(true)
+  prices          ModifierOptionPrice[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([modifierGroupId])
+}
+
+model ModifierOptionPrice {
+  id               String   @id @default(cuid())
+  modifierOptionId String
+  modifierOption   ModifierOption @relation(fields: [modifierOptionId], references: [id], onDelete: Cascade)
+  currency         String
+  amountMinor      Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([modifierOptionId, currency])
+  @@index([currency])
+}
+
+model MenuItemModifierGroup {
+  menuItemId      String
+  modifierGroupId String
+  menuItem        MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  modifierGroup   ModifierGroup @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+  minSelectOverride Int?
+  maxSelectOverride Int?
+  createdAt       DateTime @default(now())
+
+  @@id([menuItemId, modifierGroupId])
+  @@index([modifierGroupId])
+}
+
+model MenuItemVariant {
+  id              String   @id @default(cuid())
+  menuItemId      String
+  menuItem        MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name            String
+  baseAmountMinor Int
+  baseCurrency    String   @default("NGN")
+  prices          MenuItemVariantPrice[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([menuItemId])
+}
+
+model MenuItemVariantPrice {
+  id             String   @id @default(cuid())
+  menuItemVariantId String
+  menuItemVariant MenuItemVariant @relation(fields: [menuItemVariantId], references: [id], onDelete: Cascade)
+  currency       String
+  amountMinor    Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([menuItemVariantId, currency])
+  @@index([currency])
+}
+
+model MenuItemPrice {
+  id          String   @id @default(cuid())
+  menuItemId  String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  countryCode String
+  currency    String
+  amountMinor Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([menuItemId, countryCode, currency])
+  @@index([countryCode])
+}
+
+model ProductPrice {
+  id               String   @id @default(cuid())
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  currency         String
+  amountMinor      Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([productVariantId, currency])
+  @@index([currency])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?
+  guestId   String?
+  status    CartStatus @default(ACTIVE)
+  currency  String     @default("NGN")
+  subtotalAmountMinor Int @default(0)
+  totalAmountMinor Int @default(0)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([guestId])
+  @@index([guestId, status])
+}
+
+model CartItem {
+  id               String   @id @default(cuid())
+  cartId           String
+  cart             Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  quantity         Int      @default(1)
+  unitAmountMinor  Int
+  totalAmountMinor Int      @default(0)
+  currency         String   @default("NGN")
+  selectedOptions  Json?
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  menuItemId       String?
+  menuItem         MenuItem? @relation(fields: [menuItemId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productVariantId])
+  @@index([menuItemId])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id])
+  restaurantId  String?
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
+  countryCode   String      @default("ng")
+  displayCurrency String    @default("NGN")
+  settlementCurrency String @default("NGN")
+  fxRateUsed    Decimal?    @db.Decimal(18, 8)
+  orderType     OrderType   @default(DELIVERY)
+  serviceMode   ServiceMode @default(DELIVERY)
+  status        OrderStatus @default(PENDING)
+  acceptedAt    DateTime?
+  preparingAt   DateTime?
+  readyAt       DateTime?
+  outForDeliveryAt DateTime?
+  deliveredAt   DateTime?
+  cancelledAt   DateTime?
+  paymentStatus PaymentStatus @default(PENDING)
+  reservationExpiresAt DateTime?
+  taxAmountMinor Int      @default(0)
+  deliveryFeeAmountMinor Int @default(0)
+  deliveryZoneId String?
+  pickupSlotId   String?
+  taxBreakdown  Json?
+  subtotalAmountMinor Int
+  totalAmountMinor Int
+  loyaltyPointsRedeemed Int  @default(0)
+  loyaltyDiscountMinor Int   @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  items   OrderItem[]
+  payments Payment[]
+  paymentAttempts PaymentAttempt[]
+  reservations StockReservation[]
+  rewardRedemption RewardRedemption?
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model LoyaltyAccount {
+  id                 String       @id @default(cuid())
+  userId             String       @unique
+  pointsBalance      Int          @default(0)
+  tier               LoyaltyTier  @default(BRONZE)
+  lifetimeSpendMinor Int          @default(0)
+  lifetimeOrderCount Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  LoyaltyTransaction[]
+  redemptions   RewardRedemption[]
+
+  @@index([tier])
+}
+
+model LoyaltyTransaction {
+  id              String                 @id @default(cuid())
+  accountId       String
+  account         LoyaltyAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type            LoyaltyTransactionType
+  points          Int
+  pointsRemaining Int?
+  currency        String?
+  amountMinor     Int?
+  orderId         String?
+  rewardId        String?
+  referralId      String?
+  idempotencyKey  String?                @unique
+  metadata        Json?
+  expiresAt       DateTime?
+  expiredAt       DateTime?
+  createdAt       DateTime               @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([orderId])
+  @@index([type])
+}
+
+model Reward {
+  id              String      @id @default(cuid())
+  type            RewardType
+  label           String
+  description     String?
+  costPoints      Int
+  valueAmountMinor Int?
+  valuePercent    Int?
+  menuItemId      String?
+  minTier         LoyaltyTier? @default(BRONZE)
+  isActive        Boolean     @default(true)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  redemptions     RewardRedemption[]
+
+  @@index([isActive])
+  @@index([menuItemId])
+}
+
+model RewardRedemption {
+  id                 String                 @id @default(cuid())
+  rewardId           String
+  reward             Reward                 @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  accountId          String
+  account            LoyaltyAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  orderId            String?                @unique
+  order              Order?                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status             RewardRedemptionStatus @default(RESERVED)
+  pointsSpent        Int
+  discountAmountMinor Int?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@index([accountId])
+  @@index([rewardId])
+}
+
+model Referral {
+  id          String                @id @default(cuid())
+  referrerId  String
+  refereeId   String                @unique
+  code        String
+  status      ReferralRewardStatus  @default(PENDING)
+  firstOrderId String?
+  createdAt   DateTime              @default(now())
+  rewardedAt  DateTime?
+
+  referrer User @relation("ReferralSender", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User @relation("ReferralRecipient", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([code])
+}
+
+model LoyaltyConfig {
+  id                         String   @id @default(cuid())
+  key                        String   @unique
+  earnRateAmountMinor        Int      @default(100)
+  earnRatePoints             Int      @default(1)
+  pointValueMinor            Int      @default(100)
+  expiryDays                 Int      @default(365)
+  maxRedemptionPerOrderPoints Int     @default(1000)
+  bronzeMinSpendMinor        Int      @default(0)
+  silverMinSpendMinor        Int      @default(100000)
+  goldMinSpendMinor          Int      @default(250000)
+  bronzeMinOrders            Int      @default(0)
+  silverMinOrders            Int      @default(5)
+  goldMinOrders              Int      @default(12)
+  bronzeMultiplierBps        Int      @default(10000)
+  silverMultiplierBps        Int      @default(12000)
+  goldMultiplierBps          Int      @default(15000)
+  referralRewardPoints       Int      @default(200)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+model OrderItem {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quantity         Int      @default(1)
+  unitAmountMinor  Int
+  currency         String   @default("NGN")
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  menuItemId       String?
+  menuItem         MenuItem? @relation(fields: [menuItemId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productVariantId])
+  @@index([menuItemId])
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider   PaymentProvider
+  status     PaymentStatus @default(PENDING)
+  amountMinor Int
+  currency   String   @default("NGN")
+  reference  String?  @unique
+  providerPaymentId String?
+  idempotencyKeyId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  attempts  PaymentAttempt[]
+
+  idempotencyKey IdempotencyKey? @relation(fields: [idempotencyKeyId], references: [id])
+
+  @@index([orderId])
+  @@index([status])
+  @@unique([provider, providerPaymentId])
+}
+
+model PaymentAttempt {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentId    String?
+  payment      Payment? @relation(fields: [paymentId], references: [id])
+  provider     PaymentProvider
+  countryCode  String
+  currency     String
+  status       PaymentAttemptStatus
+  latencyMs    Int
+  failureReason String?
+  retryable    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([orderId])
+  @@index([provider])
+  @@index([countryCode, currency])
+}
+
+model ProviderMetric {
+  id           String   @id @default(cuid())
+  provider     PaymentProvider
+  countryCode  String
+  currency     String
+  totalAttempts Int     @default(0)
+  totalFailures Int     @default(0)
+  totalSuccess Int      @default(0)
+  failureRate  Decimal  @db.Decimal(5, 4) @default(0)
+  avgLatencyMs Int      @default(0)
+  lastFailureAt DateTime?
+  disabledUntil DateTime?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@unique([provider, countryCode, currency])
+  @@index([disabledUntil])
+}
+
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   PaymentProvider
+  eventId    String
+  payload    String
+  receivedAt DateTime @default(now())
+  processedAt DateTime?
+  status     String   @default("RECEIVED")
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
+}
+
+model DomainEvent {
+  id        String   @id @default(cuid())
+  type      String
+  payload   String
+  status    DomainEventStatus @default(PENDING)
+  attempts  Int      @default(0)
+  nextRunAt DateTime @default(now())
+  lockedAt  DateTime?
+  lockedBy  String?
+  lastError String?
+  createdAt DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([nextRunAt])
+}
+
+model NotificationPreference {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  channel   NotificationChannel
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, type, channel])
+  @@index([userId])
+}
+
+model NotificationLog {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String?
+  type      NotificationType
+  channel   NotificationChannel
+  status    NotificationStatus @default(PENDING)
+  provider  String?
+  errorMessage String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  sentAt    DateTime?
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId, type, channel])
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([eventId])
+}
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label        String
+  fullName     String
+  phone        String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  country      String
+  postalCode   String?
+  latitude     Decimal  @db.Decimal(10, 6)
+  longitude    Decimal  @db.Decimal(10, 6)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+model FxRate {
+  id            String   @id @default(cuid())
+  baseCurrency  String
+  quoteCurrency String
+  rate          Decimal  @db.Decimal(18, 8)
+  updatedAt     DateTime @default(now())
+
+  @@unique([baseCurrency, quoteCurrency])
+  @@index([quoteCurrency])
+}
+
+model CountryConfig {
+  id                      String   @id @default(cuid())
+  countryCode             String   @unique
+  defaultCurrency         String
+  allowedCurrencies       String[]
+  allowedPaymentProviders PaymentProvider[]
+  paymentProviderWeights  Json?
+  taxModel                TaxModel
+  taxInclusive            Boolean  @default(false)
+  taxRateBps              Int      @default(0)
+  fxSpreadBpsOverride     Int?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model Restaurant {
+  id              String   @id @default(cuid())
+  name            String
+  timezone        String
+  defaultCurrency String
+  latitude        Decimal  @db.Decimal(10, 6)
+  longitude       Decimal  @db.Decimal(10, 6)
+  addressLine1    String
+  addressLine2    String?
+  city            String
+  state           String
+  countryCode     String
+  postalCode      String?
+  phone           String?
+  email           String?
+  settings        RestaurantSettings?
+  operatingHours  OperatingHours[]
+  holidayHours    HolidayHours[]
+  deliveryZones   DeliveryZone[]
+  pickupSlots     PickupSlot[]
+  orders          Order[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RestaurantSettings {
+  id                 String   @id @default(cuid())
+  restaurantId       String   @unique
+  restaurant         Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  preparationBufferMins Int    @default(20)
+  slotIntervalMins   Int      @default(15)
+  maxOrdersPerSlot   Int      @default(20)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model OperatingHours {
+  id            String   @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  dayOfWeek     Int
+  openTime      String
+  closeTime     String
+  isClosed      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([restaurantId])
+  @@unique([restaurantId, dayOfWeek])
+}
+
+model HolidayHours {
+  id            String   @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  date          DateTime
+  openTime      String?
+  closeTime     String?
+  isClosed      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([restaurantId])
+  @@unique([restaurantId, date])
+}
+
+model DeliveryZone {
+  id            String   @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  radiusKm      Decimal  @db.Decimal(6, 2)
+  deliveryFeeAmountMinor Int
+  minimumOrderAmountMinor Int
+  currency      String
+  estimatedDeliveryMinutes Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([restaurantId])
+}
+
+model PickupSlot {
+  id            String   @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  date          DateTime
+  startTime     String
+  endTime       String
+  slotIntervalMins Int
+  preparationBufferMins Int
+  maxOrders     Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([restaurantId])
+  @@index([date])
+}
+
+model StockReservation {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity         Int
+  reservedUntil    DateTime
+  releasedAt       DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productVariantId])
+  @@index([reservedUntil])
+}
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  key       String
+  scope     String
+  userId    String?
+  orderId   String?
+  status    IdempotencyStatus @default(STARTED)
+  requestHash String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  payments  Payment[]
+
+  @@unique([key, scope])
+  @@index([userId])
+  @@index([expiresAt])
+}

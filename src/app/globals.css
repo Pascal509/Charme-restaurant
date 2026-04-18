@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-cinnabar: #b22222;
+  --brand-jade: #1c5f5a;
+  --brand-ink: #1a1a1a;
+  --brand-rice: #f7f2ea;
+  --brand-gold: #b88b4a;
+
+  --font-display: "Playfair Display";
+  --font-body: "Source Sans 3";
+  --font-cjk: "Noto Sans SC";
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
