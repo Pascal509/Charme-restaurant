@@ -303,10 +303,12 @@ export default function AdminDashboardPage() {
   });
 
   const categories = menuQuery.data?.categories ?? [];
-  const orders = ordersQuery.data?.orders ?? [];
+  const orders = useMemo(
+    () => ordersQuery.data?.orders ?? [],
+    [ordersQuery.data?.orders]
+  );
   const metrics = metricsQuery.data;
-
-  const liveOrders = useMemo(() => orders, [orders]);
+  const liveOrders = orders;
 
   function handleEdit(item: MenuItem) {
     setEditItemId(item.id);

@@ -23,6 +23,10 @@ export type CountryResolution = {
   paymentProviderWeights?: Record<string, number> | null;
   preferredProvider?: PaymentProvider | null;
 };
+
+export async function resolveCountryConfig(
+  input: CountryResolutionInput
+): Promise<CountryResolution> {
   const countryCode = resolveCountryCode(input);
   const config = await prisma.countryConfig.findUnique({
     where: { countryCode }

@@ -243,7 +243,7 @@ export default function CheckoutPage() {
     if (!cart || !guestId) return;
 
     validateMutation.mutate();
-  }, [cart?.id, fulfillmentType, paymentProvider, addressId, pickupSlotId, guestId]);
+  }, [cart, fulfillmentType, paymentProvider, addressId, pickupSlotId, guestId, validateMutation]);
 
   useEffect(() => {
     setCouponTotals(null);

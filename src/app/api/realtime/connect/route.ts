@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       userId: payload.sub ?? null,
       role: payload.role ?? "CUSTOMER"
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

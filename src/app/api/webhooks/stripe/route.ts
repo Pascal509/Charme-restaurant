@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   const result = await updatePaymentFromWebhook({
     provider: "STRIPE",
     eventId,
-  const result = await updatePaymentFromWebhook({
+    providerPaymentId,
     status,
     amountMinor,
     currency,
@@ -58,13 +58,6 @@ export async function POST(request: Request) {
 
   log("info", "Stripe webhook processed", {
     eventId,
-
-  log("info", "Stripe webhook processed", {
-    eventId,
-    providerPaymentId,
-    status,
-    result: result.status
-  });
     providerPaymentId,
     status,
     result: result.status

@@ -66,7 +66,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
     const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
     setSelectedId(defaultAddress.id);
     onSelectAddress(isAuthenticated ? defaultAddress.id : null, !isAuthenticated);
-  }, [addresses.length, isAuthenticated]);
+  }, [addresses, isAuthenticated, onSelectAddress]);
 
   async function handleSave(input: AddressInput) {
     setActionError(null);

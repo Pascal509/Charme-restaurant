@@ -55,7 +55,10 @@ export default function AccountPage({
 
   const basePath = `/${locale}/${country}`;
   const user = session?.user ?? null;
-  const orders = ordersQuery.data?.orders ?? [];
+  const orders = useMemo(
+    () => ordersQuery.data?.orders ?? [],
+    [ordersQuery.data?.orders]
+  );
 
   const hasOrders = orders.length > 0;
   const latestOrder = useMemo(() => orders[0] ?? null, [orders]);

@@ -44,7 +44,7 @@ export function createSocketServer(httpServer: import("http").Server) {
 
       socket.data.user = { id: userId, role } satisfies RealtimeUser;
       return next();
-    } catch (error) {
+    } catch {
       return next(new Error("Unauthorized"));
     }
   });
