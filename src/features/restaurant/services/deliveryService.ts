@@ -32,8 +32,21 @@ export async function findDeliveryZone(params: {
   if (!restaurant) return null;
 
   const zones = (await prisma.deliveryZone.findMany({
-    where: { restaurantId: params.restaurantId }
-  })) as DeliveryZoneRecord[];
+    where: { restaurantId: params.restaurantId },
+    select: {
+      id: true,
+      radiusKm: true,
+      deliveryFeeAmountMinor: true,
+      minimumOrderAmountMinor: true,
+      currency: true
+    }
+  })).map((zone) => ({
+    id: zone.id,
+    radiusKm: Number(zone.radiusKm),
+    deliveryFeeAmountMinor: zone.deliveryFeeAmountMinor,
+    minimumOrderAmountMinor: zone.minimumOrderAmountMinor,
+    currency: zone.currency
+  })) satisfies DeliveryZoneRecord[];
 
   if (zones.length === 0) return null;
 

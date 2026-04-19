@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 const statusPriority: Record<string, number> = {
   PREPARING: 1,
@@ -6,7 +7,11 @@ const statusPriority: Record<string, number> = {
   READY: 3
 };
 
-export async function listKitchenOrders(restaurantId: string) {
+type KitchenOrder = Prisma.OrderGetPayload<{
+  include: { items: { include: { menuItem: true; productVariant: true } } };
+}>;
+
+export async function listKitchenOrders(restaurantId: string): Promise<KitchenOrder[]> {
   const orders = await prisma.order.findMany({
     where: {
       restaurantId,
@@ -19,14 +24,12 @@ export async function listKitchenOrders(restaurantId: string) {
     }
   });
 
-  type KitchenOrder = Awaited<ReturnType<typeof listKitchenOrders>>[number];
-  return orders.sort((a: KitchenOrder, b: KitchenOrder) => comparePriority(a, b));
+  return orders.sort((a, b) => comparePriority(a, b));
 }
 
-export function groupKitchenOrdersByStatus(orders: Awaited<ReturnType<typeof listKitchenOrders>>) {
-  type KitchenOrder = Awaited<ReturnType<typeof listKitchenOrders>>[number];
+export function groupKitchenOrdersByStatus(orders: KitchenOrder[]) {
   return orders.reduce(
-    (acc: { ACCEPTED: KitchenOrder[]; PREPARING: KitchenOrder[]; READY: KitchenOrder[] }, order: KitchenOrder) => {
+    (acc: { ACCEPTED: KitchenOrder[]; PREPARING: KitchenOrder[]; READY: KitchenOrder[] }, order) => {
       if (order.status === "ACCEPTED") acc.ACCEPTED.push(order);
       if (order.status === "PREPARING") acc.PREPARING.push(order);
       if (order.status === "READY") acc.READY.push(order);
@@ -36,10 +39,7 @@ export function groupKitchenOrdersByStatus(orders: Awaited<ReturnType<typeof lis
   );
 }
 
-function comparePriority(
-  a: Awaited<ReturnType<typeof listKitchenOrders>>[number],
-  b: Awaited<ReturnType<typeof listKitchenOrders>>[number]
-) {
+function comparePriority(a: KitchenOrder, b: KitchenOrder) {
   const priorityA = statusPriority[a.status] ?? 99;
   const priorityB = statusPriority[b.status] ?? 99;
 

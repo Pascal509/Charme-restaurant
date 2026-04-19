@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { loyaltyConfigSchema } from "@/lib/validation/payloads";
 import { getLoyaltyConfig, updateLoyaltyConfig } from "@/features/loyalty/services/loyaltyService";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub || token.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub || token.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

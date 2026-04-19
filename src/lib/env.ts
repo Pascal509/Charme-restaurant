@@ -1,3 +1,10 @@
 import { envSchema } from "@/lib/validation/env";
+import type { z } from "zod";
 
-export const env = envSchema.parse(process.env);
+export type Env = z.infer<typeof envSchema>;
+
+const shouldSkip = process.env.SKIP_ENV_VALIDATION === "1";
+
+export const env: Env = shouldSkip
+	? (process.env as unknown as Env)
+	: envSchema.parse(process.env);

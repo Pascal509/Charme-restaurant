@@ -49,6 +49,9 @@ export async function enqueueNotificationsFromEvent(params: {
     return;
   }
 
+  const userId = order.userId;
+  const userEmail = order.user.email ?? null;
+
   const template = resolveTemplate(notificationType, order.id);
   const preferences = await prisma.notificationPreference.findMany({
     where: { userId: order.userId, type: notificationType }
@@ -64,12 +67,15 @@ export async function enqueueNotificationsFromEvent(params: {
       const enabled = preferenceMap.has(channel)
         ? preferenceMap.get(channel) ?? true
         : true;
-      const skipReason = enabled ? null : "Preference disabled";
-      const recipient = resolveRecipient(channel, order.user.email);
+      let skipReason = enabled ? null : "Preference disabled";
+      const recipient = resolveRecipient(channel, userEmail);
+      if (!recipient && channel === "EMAIL") {
+        skipReason = skipReason ?? "Missing email";
+      }
 
       const job: NotificationJob = {
         eventId: params.eventId,
-        userId: order.userId,
+        userId,
         orderId: order.id,
         type: notificationType,
         channel,
@@ -78,7 +84,7 @@ export async function enqueueNotificationsFromEvent(params: {
         skipReason
       };
 
-      const jobId = `${params.eventId}:${order.userId}:${notificationType}:${channel}`;
+      const jobId = `${params.eventId}:${userId}:${notificationType}:${channel}`;
       await notificationQueue.add("send-notification", job, { jobId });
     })
   );

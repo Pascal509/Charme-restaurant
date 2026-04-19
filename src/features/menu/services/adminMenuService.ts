@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { MenuCategory, Prisma } from "@prisma/client";
 import { env } from "@/lib/env";
 import { Money } from "@/lib/money";
 
@@ -181,7 +182,22 @@ export async function deleteMenuItem(id: string) {
   return prisma.menuItem.delete({ where: { id } });
 }
 
-export async function listMenuCategories(params: { menuId?: string; includeItems?: boolean }) {
+type MenuCategoryWithItems = Prisma.MenuCategoryGetPayload<{
+  include: { items: { include: { menuItem: true } } };
+}>;
+
+export async function listMenuCategories(params: {
+  menuId?: string;
+  includeItems: true;
+}): Promise<MenuCategoryWithItems[]>;
+export async function listMenuCategories(params: {
+  menuId?: string;
+  includeItems?: false;
+}): Promise<MenuCategory[]>;
+export async function listMenuCategories(params: {
+  menuId?: string;
+  includeItems?: boolean;
+}) {
   const menuId = await resolveMenuId(params.menuId);
 
   return prisma.menuCategory.findMany({

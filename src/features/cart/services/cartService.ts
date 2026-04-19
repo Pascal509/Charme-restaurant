@@ -424,13 +424,13 @@ async function convertMoney(money: Money, targetCurrency: string) {
 }
 
 function normalizeOptions(optionIds?: string[]) {
-  if (!optionIds || optionIds.length === 0) return null;
+  if (!optionIds || optionIds.length === 0) return undefined;
   const unique = Array.from(new Set(optionIds));
   unique.sort();
   return { optionIds: unique };
 }
 
-function compareOptions(existing: unknown, incoming: { optionIds: string[] } | null) {
+function compareOptions(existing: unknown, incoming?: { optionIds: string[] }) {
   if (!existing && !incoming) return true;
   if (!existing || !incoming) return false;
   const existingIds = extractOptionIds(existing);

@@ -3,20 +3,31 @@ import { env } from "@/lib/env";
 import type { PaymentGateway, PaymentSessionRequest, PaymentSessionResponse } from "@/features/payment/services/paymentGateway";
 import { Money } from "@/lib/money";
 
-const flutterwave = new (Flutterwave as unknown as {
-  new (
-    publicKey: string,
-    secretKey: string
-  ): {
-    Payment: {
-      create: (payload: Record<string, unknown>) => Promise<{ data: { link: string; id: string } }>;
-    };
+type FlutterwaveClient = {
+  Payment: {
+    create: (payload: Record<string, unknown>) => Promise<{ data: { link: string; id: string } }>;
   };
-})(env.FLUTTERWAVE_PUBLIC_KEY, env.FLUTTERWAVE_SECRET_KEY);
+};
+
+let flutterwaveClient: FlutterwaveClient | null = null;
+
+function getFlutterwaveClient() {
+  if (flutterwaveClient) return flutterwaveClient;
+  if (!env.FLUTTERWAVE_PUBLIC_KEY || !env.FLUTTERWAVE_SECRET_KEY) {
+    throw new Error("Flutterwave credentials missing");
+  }
+
+  flutterwaveClient = new (Flutterwave as unknown as {
+    new (publicKey: string, secretKey: string): FlutterwaveClient;
+  })(env.FLUTTERWAVE_PUBLIC_KEY, env.FLUTTERWAVE_SECRET_KEY);
+
+  return flutterwaveClient;
+}
 
 export class FlutterwaveGateway implements PaymentGateway {
   async createSession(request: PaymentSessionRequest): Promise<PaymentSessionResponse> {
     const money = new Money(request.amountMinor, request.currency);
+    const flutterwave = getFlutterwaveClient();
     const response = await flutterwave.Payment.create({
       tx_ref: request.orderId,
       amount: money.formatMajor(),

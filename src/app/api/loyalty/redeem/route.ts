@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { loyaltyRedeemSchema } from "@/lib/validation/payloads";
 import { getActiveCart } from "@/features/cart/services/cartService";
 import { validateCartForCheckout } from "@/features/checkout/services/checkoutService";
 
-export async function POST(request: Request) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+export async function POST(request: NextRequest) {
+  const token = await getToken({
+    req: request as NextRequest,
+    secret: process.env.NEXTAUTH_SECRET
+  });
   if (!token?.sub) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

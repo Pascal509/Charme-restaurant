@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      SKIP_ENV_VALIDATION: "1"
 
     steps:
       - name: Checkout

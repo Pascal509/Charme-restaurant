@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
 
 const ADMIN_ORDERS_ENDPOINT = "/api/admin/orders";
@@ -37,6 +38,13 @@ type AdminOrder = {
 type OrdersResponse = {
   orders: AdminOrder[];
 };
+
+type OrderStatusMutation = UseMutationResult<
+  unknown,
+  Error,
+  { orderId: string; action: string },
+  unknown
+>;
 
 type MetricsResponse = {
   todayOrderCount: number;
@@ -212,7 +220,7 @@ export default function AdminDashboardPage() {
     };
   }, [queryClient]);
 
-  const statusMutation = useMutation({
+  const statusMutation = useMutation<unknown, Error, { orderId: string; action: string }>({
     mutationFn: async (payload: { orderId: string; action: string }) => {
       const response = await fetch(`/api/orders/${payload.orderId}/${payload.action}`,
         { method: "POST" }
@@ -744,10 +752,7 @@ export default function AdminDashboardPage() {
   );
 }
 
-function renderOrderActions(
-  order: AdminOrder,
-  mutation: ReturnType<typeof useMutation>
-) {
+function renderOrderActions(order: AdminOrder, mutation: OrderStatusMutation) {
   const buttons: Array<{ label: string; action: string; visible: boolean }> = [
     { label: "Accept", action: "accept", visible: order.status === "PENDING" },
     { label: "Start prep", action: "start-prep", visible: order.status === "ACCEPTED" },

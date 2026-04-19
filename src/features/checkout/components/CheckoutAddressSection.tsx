@@ -216,13 +216,13 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
   );
 }
 
-function readGuestAddresses() {
+function readGuestAddresses(): AddressRecord[] {
   if (typeof window === "undefined") return [] as AddressRecord[];
   const raw = window.localStorage.getItem(GUEST_STORAGE_KEY);
   if (!raw) return [] as AddressRecord[];
   try {
     const parsed = JSON.parse(raw) as AddressRecord[];
-    return parsed.map((entry) => ({ ...entry, source: "guest" }));
+    return parsed.map((entry) => ({ ...entry, source: "guest" as const }));
   } catch {
     return [] as AddressRecord[];
   }
@@ -237,14 +237,14 @@ function upsertGuestAddress(
   current: AddressRecord[],
   editing: AddressRecord | null,
   input: AddressInput
-) {
+): AddressRecord[] {
   if (editing) {
     return current.map((address) =>
       address.id === editing.id
         ? {
             ...address,
             ...input,
-            source: "guest"
+            source: "guest" as const
           }
         : address
     );

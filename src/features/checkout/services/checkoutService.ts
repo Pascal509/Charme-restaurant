@@ -368,6 +368,9 @@ export async function createOrderFromCart(params: {
       total,
       loyalty
     } = validation;
+    if (!restaurant) {
+      throw new Error("Restaurant not configured");
+    }
     const baseTotalMinor = taxBreakdown.totalAmountMinor + deliveryFee.amountMinor;
     const settlement = await convertToBase(total, countryConfig.fxSpreadBpsOverride ?? undefined);
     const settlementCurrency = settlement.money.currency;

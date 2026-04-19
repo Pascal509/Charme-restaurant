@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
 
 const DEFAULT_DAYS = 30;
 const MAX_DAYS = 90;
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub || token.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
