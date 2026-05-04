@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import Image from "next/image";
+import { useMemo, useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
+import ImageWrapper from "@/components/ui/ImageWrapper";
 import { useCartStore } from "@/store/useCartStore";
 import type { MenuItem, SelectedMap } from "@/features/menu/types";
-import { StarRatingDisplay, formatRatingLabel } from "@/features/menu/components/RatingStars";
 
 const ModifierDrawer = dynamic(() => import("@/features/menu/components/ModifierDrawer"), {
   ssr: false
@@ -27,23 +26,17 @@ type MenuCategory = {
   items: MenuItem[];
 };
 
-type MenuResponse = {
+type MenuPageProps = {
   categories: MenuCategory[];
 };
 
-type Promotion = {
-  id: string;
-  label?: string | null;
-  discountPercent?: number | null;
-  discountAmountMinor?: number | null;
-  menuItemIds?: string[] | null;
+type MenuImage = {
+  src: string;
+  position: "object-top" | "object-center" | "object-bottom";
 };
 
-type PromotionsResponse = {
-  promotions: Promotion[];
-};
-
-export default function MenuPage() {
+export default function MenuPage({ categories: initialCategories }: MenuPageProps) {
+  const ITEMS_PER_PAGE = 6;
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<SelectedMap>({});
@@ -54,36 +47,9 @@ export default function MenuPage() {
   const [priceFilter, setPriceFilter] = useState<string>("all");
   const [focusedItem, setFocusedItem] = useState<MenuItem | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [categoryPages, setCategoryPages] = useState<Record<string, number>>({});
   const { itemCount, setItemCount, incrementBy } = useCartStore();
 
-  const menuQuery = useQuery<MenuResponse>({
-    queryKey: ["menu"],
-    queryFn: async () => {
-      const response = await fetch("/api/menu");
-      if (!response.ok) {
-        throw new Error("Failed to load menu");
-      }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: true
-  });
-
-  const promotionsQuery = useQuery<PromotionsResponse>({
-    queryKey: ["promotions"],
-    queryFn: async () => {
-      const response = await fetch("/api/promotions/active");
-      if (!response.ok) {
-        return { promotions: [] };
-      }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
 
   useEffect(() => {
     const id = resolveGuestId();
@@ -142,10 +108,9 @@ export default function MenuPage() {
   });
 
   const categories = useMemo(() => {
-    const list = menuQuery.data?.categories ?? [];
-    const filtered = list.filter((category) => category.isActive);
+    const filtered = initialCategories.filter((category) => category.isActive);
     return filtered.sort((a, b) => a.displayOrder - b.displayOrder);
-  }, [menuQuery.data]);
+  }, [initialCategories]);
 
   useEffect(() => {
     if (!activeCategory && categories.length > 0) {
@@ -176,13 +141,49 @@ export default function MenuPage() {
       .filter((category) => category.items.length > 0);
   }, [categories, priceFilter, searchTerm, selectedCategoryId]);
 
-  function handleAddToCart(item: MenuItem) {
+  useEffect(() => {
+    setCategoryPages({});
+  }, [priceFilter, searchTerm, selectedCategoryId]);
+
+  const featuredItems = useMemo(() => {
+    const items = filteredCategories.flatMap((category) => category.items);
+    return items.slice(0, 4);
+  }, [filteredCategories]);
+
+  useEffect(() => {
+    if (filteredCategories.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]?.target?.id) {
+          setActiveCategory(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-30% 0px -60% 0px", threshold: [0.1, 0.25, 0.5] }
+    );
+
+    filteredCategories.forEach((category) => {
+      const target = document.getElementById(category.id);
+      if (target) observer.observe(target);
+    });
+
+    return () => observer.disconnect();
+  }, [filteredCategories]);
+
+  function handleAddToCart(item: MenuItem, sourceEl?: HTMLDivElement | null, imageUrl?: string) {
     if (item.modifierGroups && item.modifierGroups.length > 0) {
       setSelectedItem(item);
       setSelectedOptions({});
       return;
     }
 
+    if (imageUrl && sourceEl) {
+      animateFlyToCart(imageUrl, sourceEl);
+    }
+    pulseCartIcon();
     addMutation.mutate({ menuItemId: item.id, quantity: 1, selectedOptions: [] });
   }
 
@@ -205,6 +206,8 @@ export default function MenuPage() {
       quantity: 1,
       selectedOptions: flattened
     });
+
+    pulseCartIcon();
 
     setSelectedItem(null);
     setSelectedOptions({});
@@ -229,54 +232,49 @@ export default function MenuPage() {
       quantity: detailQty,
       selectedOptions: []
     });
+    pulseCartIcon();
     setDetailItem(null);
   }
 
   const cartBadge = itemCount > 0 ? (
-    <span className="ml-2 rounded-full bg-brand-jade px-2 py-0.5 text-xs font-semibold text-white">
+    <span
+      key={itemCount}
+      className="ml-2 rounded-full bg-brand-gold/90 px-2 py-0.5 text-xs font-semibold text-black animate-count"
+    >
       {itemCount}
     </span>
   ) : null;
 
   return (
-    <main className="scroll-smooth bg-brand-rice">
-      <Container className="py-10">
-        <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Menu</p>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">
-                Curated dishes with modern indulgence
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm text-brand-ink/70">
-                Select from our seasonal categories and build the perfect order. Fresh ingredients,
-                precise prep, and thoughtful pairings.
-              </p>
-            </div>
-            <div className="flex items-center text-sm font-semibold text-brand-ink">
-              Cart{cartBadge}
-            </div>
+    <main className="scroll-smooth bg-brand-obsidian text-brand-ink lux-gradient page-transition">
+      <Container className="py-16 lg:py-20">
+        <section className="rounded-3xl border border-brand-gold/10 bg-black/40 px-6 py-10 shadow-crisp sm:px-10 sm:py-12">
+          <p className="seal-badge">Menu</p>
+          <h1 className="mt-4 font-display text-3xl text-brand-ink sm:text-4xl lg:text-5xl">
+            Curated dishes with modern indulgence
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm text-brand-ink/70 sm:text-base">
+            Select from our seasonal categories and build the perfect order. Fresh ingredients,
+            precise prep, and thoughtful pairings.
+          </p>
+          <div className="mt-6 flex items-center text-sm font-semibold text-brand-ink">
+            Cart
+            {cartBadge}
           </div>
-        </div>
+        </section>
       </Container>
 
-      <section className="border-t border-brand-ink/10 bg-brand-rice">
-        <Container className="py-8">
-          {menuQuery.isLoading ? (
-            <MenuSkeleton />
-          ) : menuQuery.isError ? (
-            <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
-              Failed to load menu. Please refresh.
-            </div>
-          ) : categories.length === 0 ? (
-            <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
+      <section className="border-t border-brand-gold/10 bg-brand-obsidian/80">
+        <Container className="py-10 lg:py-12">
+          {categories.length === 0 ? (
+            <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-sm text-brand-ink/70 shadow-soft">
               No menu items available right now.
             </div>
           ) : (
             <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
               <aside className="hidden lg:block">
                 <div className="sticky top-24 space-y-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                     Categories
                   </p>
                   <nav className="flex flex-col gap-2">
@@ -284,10 +282,10 @@ export default function MenuPage() {
                       <button
                         key={category.id}
                         onClick={() => scrollToCategory(category.id)}
-                        className={`rounded-md px-3 py-2 text-left text-sm transition ${
+                        className={`rounded-full px-4 py-2 text-left text-sm transition ${
                           activeCategory === category.id
-                            ? "bg-brand-ink text-brand-rice"
-                            : "text-brand-ink/70 hover:bg-brand-ink/10"
+                            ? "bg-brand-gold text-black"
+                            : "text-brand-ink/70 hover:bg-brand-gold/10"
                         }`}
                       >
                         {category.name}
@@ -297,28 +295,28 @@ export default function MenuPage() {
                 </div>
               </aside>
 
-              <div className="space-y-10">
+              <div className="space-y-20">
                 <div className="space-y-4">
-                  <div className="grid gap-3 rounded-lg border border-brand-ink/10 bg-white p-4 shadow-soft sm:grid-cols-[1fr_200px_200px]">
+                  <div className="grid gap-4 rounded-2xl bg-white/5 p-6 sm:grid-cols-[1fr_200px_200px]">
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
+                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                         Search
                       </label>
                       <input
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
                         placeholder="Search dishes, ingredients"
-                        className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
+                        className="w-full rounded-xl border border-brand-gold/5 bg-black/30 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-ink/40"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
+                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                         Category
                       </label>
                       <select
                         value={selectedCategoryId}
                         onChange={(event) => setSelectedCategoryId(event.target.value as string)}
-                        className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
+                        className="w-full rounded-xl border border-brand-gold/5 bg-black/30 px-3 py-2 text-sm text-brand-ink"
                       >
                         <option value="all">All</option>
                         {categories.map((category) => (
@@ -329,13 +327,13 @@ export default function MenuPage() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
+                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                         Price
                       </label>
                       <select
                         value={priceFilter}
                         onChange={(event) => setPriceFilter(event.target.value)}
-                        className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
+                        className="w-full rounded-xl border border-brand-gold/5 bg-black/30 px-3 py-2 text-sm text-brand-ink"
                       >
                         <option value="all">All</option>
                         <option value="low">Under 5,000</option>
@@ -345,49 +343,98 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  <MobileCategoryTabs
-                    categories={categories}
-                    activeCategory={activeCategory}
-                    onChange={(id) => {
-                      setActiveCategory(id);
-                      scrollToCategory(id);
-                    }}
-                  />
+                  <div className="sticky top-16 z-30 -mx-6 border-y border-brand-gold/10 bg-brand-obsidian/85 px-6 py-4 backdrop-blur lg:hidden">
+                    <MobileCategoryTabs
+                      categories={categories}
+                      activeCategory={activeCategory}
+                      onChange={(id) => {
+                        setActiveCategory(id);
+                        scrollToCategory(id);
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {filteredCategories.length === 0 ? (
-                  <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
+                  <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-sm text-brand-ink/70 shadow-soft">
                     No items match your search. Try adjusting filters.
                   </div>
                 ) : null}
 
-                {filteredCategories.map((category) => (
-                  <section key={category.id} id={category.id} className="scroll-mt-24">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <div>
-                        <h2 className="font-display text-2xl text-brand-ink">{category.name}</h2>
-                        {category.description ? (
-                          <p className="mt-2 text-sm text-brand-ink/60">
-                            {category.description}
-                          </p>
-                        ) : null}
-                      </div>
+                {featuredItems.length > 0 ? (
+                  <section className="scroll-mt-32">
+                    <div className="border-t border-brand-gold/10 pt-10">
+                      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
+                        Chef's Specials
+                      </p>
+                      <h2 className="mt-3 font-serif text-3xl font-semibold tracking-wide text-brand-ink sm:text-4xl">
+                        Recommended
+                      </h2>
+                      <p className="mt-2 text-sm text-brand-ink/60">
+                        A curated selection of signature dishes and guest favorites.
+                      </p>
                     </div>
-                    <div className="mt-6 grid gap-6 md:grid-cols-2">
-                      {category.items.map((item) => (
+                    <div className="mt-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                      {featuredItems.map((item) => (
                         <MenuItemCard
-                          key={item.id}
+                          key={`featured-${item.id}`}
                           item={item}
-                          onAdd={() => handleAddToCart(item)}
+                          onAdd={handleAddToCart}
                           onOpen={() => openDetail(item)}
                           onFocus={setFocusedItem}
-                          promotionBadges={resolvePromotionBadges(
-                            item,
-                            promotionsQuery.data?.promotions ?? []
-                          )}
                         />
                       ))}
                     </div>
+                  </section>
+                ) : null}
+
+                {filteredCategories.map((category) => (
+                  <section key={category.id} id={category.id} className="scroll-mt-32">
+                    <div className="border-t border-brand-gold/10 pt-10">
+                      <h2 className="font-serif text-3xl font-semibold tracking-wide text-brand-ink sm:text-4xl">
+                        {category.name}
+                      </h2>
+                      {category.description ? (
+                        <p className="mt-2 text-sm text-brand-ink/60 sm:text-base">
+                          {category.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    {(() => {
+                      const totalPages = Math.max(1, Math.ceil(category.items.length / ITEMS_PER_PAGE));
+                      const currentPage = Math.min(categoryPages[category.id] ?? 1, totalPages);
+                      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+                      const visibleItems = category.items.slice(start, start + ITEMS_PER_PAGE);
+
+                      return (
+                        <>
+                          <div className="mt-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                            {visibleItems.map((item) => (
+                              <MenuItemCard
+                                key={item.id}
+                                item={item}
+                                onAdd={handleAddToCart}
+                                onOpen={() => openDetail(item)}
+                                onFocus={setFocusedItem}
+                              />
+                            ))}
+                          </div>
+                          {totalPages > 1 ? (
+                            <PaginationBar
+                              className="mt-8"
+                              currentPage={currentPage}
+                              totalPages={totalPages}
+                              onPageChange={(nextPage) =>
+                                setCategoryPages((current) => ({
+                                  ...current,
+                                  [category.id]: nextPage
+                                }))
+                              }
+                            />
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </section>
                 ))}
               </div>
@@ -425,88 +472,81 @@ function MenuItemCard({
   item,
   onAdd,
   onOpen,
-  onFocus,
-  promotionBadges
+  onFocus
 }: {
   item: MenuItem;
-  onAdd: () => void;
+  onAdd: (item: MenuItem, sourceEl?: HTMLDivElement | null, imageUrl?: string) => void;
   onOpen: () => void;
   onFocus: (item: MenuItem) => void;
-  promotionBadges: string[];
 }) {
-  const badges = [...resolveBadges(item), ...promotionBadges];
+  const imageRef = useRef<HTMLDivElement | null>(null);
+  const blurData =
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB2aWV3Qm94PSIwIDAgNCA0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMxMTExMTEiLz48L3N2Zz4=";
+  const image = getMenuImage(item.name);
+  const isSpecial = isChefsSpecial(item);
+  const spiceLevel = getSpiceLevel(item);
 
   return (
-    <div
-      className="flex flex-col rounded-lg border border-brand-ink/10 bg-white shadow-soft"
+    <article
+      className="group flex h-full flex-col overflow-hidden rounded-3xl border border-brand-gold/10 bg-white/5 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-crisp"
       onMouseEnter={() => onFocus(item)}
       onTouchStart={() => onFocus(item)}
       onFocus={() => onFocus(item)}
       tabIndex={0}
     >
-      <div className="relative h-44 w-full overflow-hidden rounded-t-lg bg-brand-ink/5">
-        {item.imageUrl ? (
-          <Image
-            src={item.imageUrl}
-            alt={item.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-xs text-brand-ink/50">
-            No image
-          </div>
-        )}
-        {badges.length > 0 ? (
-          <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-            {badges.map((badge) => (
-              <span
-                key={badge}
-                className="rounded-full bg-brand-ink/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-rice"
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <ImageWrapper
+        ref={imageRef}
+        src={image.src}
+        alt={item.name}
+        aspect="menu"
+        sizes="(max-width: 768px) 100vw, 33vw"
+        blurDataURL={blurData}
+        className="w-full"
+        imageClassName="image-focus transition duration-500 ease-out group-hover:scale-[1.04]"
+        objectPositionClassName={image.position}
+        overlayClassName="opacity-70"
+      />
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-4">
-            <h3 className="text-lg font-semibold text-brand-ink">{item.name}</h3>
-            <span className="text-sm font-semibold text-brand-ink">
-              {formatCurrency(item.priceMinor, item.currency)}
-            </span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-serif text-xl font-semibold tracking-wide text-brand-ink sm:text-2xl">
+                {item.name}
+              </h3>
+              {isSpecial ? (
+                <span className="rounded-full border border-brand-gold/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-brand-gold">
+                  Chef's Special
+                </span>
+              ) : null}
+            </div>
+            {spiceLevel > 0 ? (
+              <div className="text-xs text-brand-gold" aria-label={`Spice level ${spiceLevel} of 3`}>
+                {"🌶".repeat(spiceLevel)}
+              </div>
+            ) : null}
           </div>
-          {item.description ? (
-            <p className="text-sm text-brand-ink/60">{item.description}</p>
-          ) : null}
-          <div className="flex items-center gap-2 text-xs text-brand-ink/60">
-            <StarRatingDisplay rating={item.averageRating ?? 0} />
-            <span>{formatRatingLabel(item.averageRating ?? 0, item.reviewCount ?? 0)}</span>
-          </div>
-          <p className={`text-xs ${item.isAvailable ? "text-brand-jade" : "text-brand-ink/50"}`}>
-            {item.isAvailable ? "Available" : "Unavailable"}
-          </p>
+          <span className="whitespace-nowrap text-sm font-semibold text-brand-gold sm:text-base">
+            {formatCurrency(item.priceMinor, item.currency)}
+          </span>
         </div>
-        <div className="mt-auto flex flex-col gap-2 sm:flex-row">
+        <p className="line-clamp-2 text-sm text-brand-ink/65">{getMenuDescription(item)}</p>
+        <div className="mt-auto flex items-center justify-between gap-3 pt-2">
           <button
-            className="rounded-md border border-brand-ink/15 px-4 py-2 text-sm font-semibold text-brand-ink"
+            className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/70 transition hover:text-brand-gold"
             onClick={onOpen}
           >
-            View details
+            Details
           </button>
           <button
-            className="rounded-md bg-brand-cinnabar px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-cinnabar/90 disabled:cursor-not-allowed disabled:bg-brand-ink/20"
-            onClick={onAdd}
+            className="rounded-full border border-brand-gold/30 px-4 py-2 text-xs font-semibold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-brand-ink/20 disabled:text-brand-ink/40"
+            onClick={() => onAdd(item, imageRef.current, image.src)}
             disabled={!item.isAvailable}
           >
             Add to Cart
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -520,15 +560,15 @@ function MobileCategoryTabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 lg:hidden">
+    <div className="flex gap-3 overflow-x-auto pb-1">
       {categories.map((category) => (
         <button
           key={category.id}
           onClick={() => onChange(category.id)}
           className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition ${
             activeCategory === category.id
-              ? "border-brand-ink bg-brand-ink text-brand-rice"
-              : "border-brand-ink/20 text-brand-ink/70"
+              ? "border-brand-gold bg-brand-gold text-black"
+              : "border-brand-gold/30 text-brand-ink/70"
           }`}
         >
           {category.name}
@@ -550,7 +590,7 @@ function MobileStickyCTA({
   if (!item) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-ink/10 bg-brand-rice/95 p-4 shadow-crisp sm:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-gold/10 bg-brand-obsidian/90 p-4 shadow-crisp sm:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
         <div>
           <p className="text-xs text-brand-ink/60">Selected</p>
@@ -559,13 +599,13 @@ function MobileStickyCTA({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onOpen(item)}
-            className="rounded-md border border-brand-ink/20 px-3 py-2 text-xs font-semibold text-brand-ink"
+            className="rounded-full border border-brand-gold/30 px-3 py-2 text-xs font-semibold text-brand-gold"
           >
             Details
           </button>
           <button
             onClick={() => onAdd(item)}
-            className="rounded-md bg-brand-cinnabar px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-cinnabar/60"
+            className="rounded-full bg-brand-gold px-3 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
             disabled={!item.isAvailable}
           >
             Add
@@ -576,57 +616,6 @@ function MobileStickyCTA({
   );
 }
 
-function MenuSkeleton() {
-  return (
-    <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
-      <div className="hidden lg:block">
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-10 rounded-md bg-brand-ink/10" />
-          ))}
-        </div>
-      </div>
-      <div className="space-y-8">
-        {Array.from({ length: 2 }).map((_, section) => (
-          <div key={section} className="space-y-4">
-            <div className="h-6 w-48 rounded bg-brand-ink/10" />
-            <div className="grid gap-6 md:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, card) => (
-                <div key={card} className="h-64 rounded-lg bg-brand-ink/10" />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function resolveBadges(item: MenuItem) {
-  const badges: string[] = [];
-  if (item.isAvailable && item.preparationTime && item.preparationTime <= 15) {
-    badges.push("Popular");
-  }
-  if (item.isAvailable && item.preparationTime && item.preparationTime >= 25) {
-    badges.push("Chef's Special");
-  }
-  return badges;
-}
-
-function resolvePromotionBadges(item: MenuItem, promotions: Promotion[]) {
-  return promotions
-    .filter((promo) => Array.isArray(promo.menuItemIds) && promo.menuItemIds.includes(item.id))
-    .map((promo) => {
-      if (promo.discountPercent) {
-        return `${promo.discountPercent}% OFF`;
-      }
-      if (promo.label) {
-        return promo.label;
-      }
-      return "Special";
-    });
-}
-
 function formatCurrency(amountMinor: number, currency: string) {
   const formatter = new Intl.NumberFormat("en-NG", {
     style: "currency",
@@ -635,10 +624,237 @@ function formatCurrency(amountMinor: number, currency: string) {
   return formatter.format(amountMinor / 100);
 }
 
+function PaginationBar({
+  currentPage,
+  totalPages,
+  onPageChange,
+  className
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  className?: string;
+}) {
+  const pageItems = buildPaginationItems(currentPage, totalPages);
+
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-4 ${className ?? ""}`}>
+      <p className="text-xs uppercase tracking-[0.25em] text-brand-ink/50">
+        Showing page {currentPage} of {totalPages}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="rounded-full border border-brand-gold/20 px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:border-brand-gold/40 hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Prev
+        </button>
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          className="rounded-full border border-brand-gold/20 px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:border-brand-gold/40 hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Next
+        </button>
+        {pageItems.map((pageItem, index) =>
+          pageItem === "ellipsis" ? (
+            <span key={`ellipsis-${index}`} className="px-2 text-xs text-brand-ink/40">
+              ...
+            </span>
+          ) : (
+            <button
+              key={pageItem}
+              type="button"
+              onClick={() => onPageChange(pageItem)}
+              className={`min-w-9 rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                pageItem === currentPage
+                  ? "border-brand-gold bg-brand-gold text-black"
+                  : "border-brand-gold/20 text-brand-ink/70 hover:border-brand-gold/40 hover:text-brand-gold"
+              }`}
+            >
+              {pageItem}
+            </button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function buildPaginationItems(currentPage: number, totalPages: number) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const items: Array<number | "ellipsis"> = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  if (start > 2) items.push("ellipsis");
+
+  for (let page = start; page <= end; page += 1) {
+    items.push(page);
+  }
+
+  if (end < totalPages - 1) items.push("ellipsis");
+
+  items.push(totalPages);
+  return items;
+}
+
+function getMenuImage(title: string): MenuImage {
+  const t = title.toLowerCase();
+  const needsTopCrop = t.includes("soup") || t.includes("noodle") || t.includes("bowl");
+
+  if (t.includes("dumpling")) {
+    return {
+      src: "/images/Fresh-homemade-Chinese-boiled-dumplings.jpg",
+      position: needsTopCrop ? "object-top" : "object-center"
+    };
+  }
+  if (t.includes("noodle")) {
+    return { src: "/images/noodles.jpg", position: "object-top" };
+  }
+  if (t.includes("tea") || t.includes("drink")) {
+    return { src: "/images/Charme-bubble-Tea-shop.jpg", position: "object-bottom" };
+  }
+  if (t.includes("rice")) {
+    return { src: "/images/beef-fried-rice..jpg", position: needsTopCrop ? "object-top" : "object-center" };
+  }
+  if (t.includes("duck")) {
+    return { src: "/images/best-of-Chinese-cuisine.jpg", position: needsTopCrop ? "object-top" : "object-center" };
+  }
+  if (t.includes("dim")) {
+    return {
+      src: "/images/Mai-Steamed-Chicken-and-shrimp-dumpling.jpg",
+      position: needsTopCrop ? "object-top" : "object-center"
+    };
+  }
+
+  return { src: "/images/Your-favorite-meals.jpg", position: needsTopCrop ? "object-top" : "object-center" };
+}
+
+function getMenuDescription(item: MenuItem) {
+  if (item.description && item.description.trim()) return item.description;
+
+  const name = item.name.toLowerCase();
+
+  if (name.includes("dumpling")) {
+    return "Hand-folded dumplings filled with seasoned pork and napa cabbage, delicately steamed.";
+  }
+  if (name.includes("noodle")) {
+    return "Fresh wheat noodles tossed in a rich, savory sauce with crisp vegetables.";
+  }
+  if (name.includes("fried") && name.includes("rice")) {
+    return "Fragrant wok-fried rice with eggs, scallions, and traditional seasoning.";
+  }
+  if (name.includes("rice")) {
+    return "Fragrant wok-fried rice with eggs, scallions, and traditional seasoning.";
+  }
+  if (name.includes("duck")) {
+    return "Crisp-skinned duck with rich, savory notes and a refined finishing glaze.";
+  }
+  if (name.includes("shrimp") || name.includes("prawn")) {
+    return "Succulent shrimp in a light, fragrant sauce with gentle spice and citrus lift.";
+  }
+  if (name.includes("chicken")) {
+    return "Tender chicken finished with wok aromatics, balanced spice, and a silky glaze.";
+  }
+  if (name.includes("beef")) {
+    return "Slow-cooked beef with deep umami, finished with house spices and herbs.";
+  }
+  if (name.includes("tea") || name.includes("drink") || name.includes("bubble")) {
+    return "Carefully brewed traditional tea with smooth, aromatic notes.";
+  }
+
+  return "A chef-crafted signature, layered with aroma, texture, and elegant flavor.";
+}
+
+function isChefsSpecial(item: MenuItem) {
+  const name = item.name.toLowerCase();
+  return name.includes("chef") || name.includes("special") || name.includes("signature");
+}
+
+function getSpiceLevel(item: MenuItem) {
+  const text = `${item.name} ${item.description ?? ""}`.toLowerCase();
+
+  if (text.includes("mala") || text.includes("szechuan")) {
+    return 3;
+  }
+  if (text.includes("hot") || text.includes("extra spicy") || text.includes("fiery")) {
+    return 2;
+  }
+  if (text.includes("spicy") || text.includes("chili") || text.includes("chilli") || text.includes("pepper")) {
+    return 1;
+  }
+
+  return 0;
+}
+
 function scrollToCategory(id: string) {
   const target = document.getElementById(id);
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function pulseCartIcon() {
+  if (typeof document === "undefined") return;
+  const target = document.getElementById("cart-icon");
+  if (!target) return;
+  target.classList.remove("cart-pulse");
+  void target.offsetWidth;
+  target.classList.add("cart-pulse");
+}
+
+function animateFlyToCart(imageUrl: string, sourceEl: HTMLDivElement) {
+  if (typeof window === "undefined") return;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  const target = document.getElementById("cart-icon");
+  if (!target) return;
+
+  const sourceRect = sourceEl.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+
+  const clone = document.createElement("div");
+  clone.style.position = "fixed";
+  clone.style.left = `${sourceRect.left}px`;
+  clone.style.top = `${sourceRect.top}px`;
+  clone.style.width = `${sourceRect.width}px`;
+  clone.style.height = `${sourceRect.height}px`;
+  clone.style.borderRadius = "16px";
+  clone.style.backgroundImage = `url(${imageUrl})`;
+  clone.style.backgroundSize = "cover";
+  clone.style.backgroundPosition = "center";
+  clone.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.4)";
+  clone.style.zIndex = "9999";
+  clone.style.pointerEvents = "none";
+
+  document.body.appendChild(clone);
+
+  const dx =
+    targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2);
+  const dy =
+    targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2);
+
+  const animation = clone.animate(
+    [
+      { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1 },
+      { transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.2)`, opacity: 0.2 }
+    ],
+    {
+      duration: 500,
+      easing: "cubic-bezier(0.2, 0.6, 0.2, 1)"
+    }
+  );
+
+  animation.onfinish = () => {
+    clone.remove();
+  };
 }
 
 function resolveGuestId() {

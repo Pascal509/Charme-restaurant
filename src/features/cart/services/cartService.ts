@@ -6,6 +6,7 @@ import { resolveMenuItemPrice, resolveProductVariantPrice } from "@/features/pro
 import { isMenuItemAvailable } from "@/features/menu/services/menuService";
 import { convertFromBase, convertToBase } from "@/lib/fx/fxService";
 import { env } from "@/lib/env";
+import { getCatalogService, slugify } from "@/lib/catalog";
 
 const MAX_ITEM_QTY = 20;
 
@@ -64,7 +65,14 @@ export async function getActiveCart(params: { userId?: string; guestId?: string 
       status: "ACTIVE",
       ...(params.userId ? { userId: params.userId } : { guestId: params.guestId })
     },
-    include: { items: true }
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+          productVariant: true
+        }
+      }
+    }
   });
 }
 
@@ -73,6 +81,7 @@ export async function addCartItem(cartId: string, input: CartItemInput) {
     throw new Error("Quantity exceeds limit");
   }
 
+  const normalizedInput = await normalizeCartItemIdentifiers(input);
   const normalizedOptions = normalizeOptions(input.selectedOptions);
 
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -80,7 +89,7 @@ export async function addCartItem(cartId: string, input: CartItemInput) {
     if (!cart) throw new Error("Cart not found");
     if (cart.status !== "ACTIVE") throw new Error("Cart not active");
 
-    const unitPrice = await resolveItemPricing(input, cart.currency);
+    const unitPrice = await resolveItemPricing(normalizedInput, cart.currency);
 
     if (unitPrice.currency !== cart.currency) {
       throw new Error("Currency mismatch");
@@ -89,8 +98,8 @@ export async function addCartItem(cartId: string, input: CartItemInput) {
     const existingItems = (await tx.cartItem.findMany({
       where: {
         cartId,
-        productVariantId: input.productVariantId ?? undefined,
-        menuItemId: input.menuItemId ?? undefined
+        productVariantId: normalizedInput.productVariantId ?? undefined,
+        menuItemId: normalizedInput.menuItemId ?? undefined
       }
     })) as Array<{ id: string; quantity: number; selectedOptions: unknown }>;
 
@@ -103,7 +112,7 @@ export async function addCartItem(cartId: string, input: CartItemInput) {
       if (newQty > MAX_ITEM_QTY) {
         throw new Error("Quantity exceeds limit");
       }
-      await validateAvailability(input, newQty);
+      await validateAvailability(normalizedInput, newQty);
       const updated = await tx.cartItem.update({
         where: { id: existing.id },
         data: {
@@ -118,18 +127,18 @@ export async function addCartItem(cartId: string, input: CartItemInput) {
       return updated;
     }
 
-    await validateAvailability(input, input.quantity);
+    await validateAvailability(normalizedInput, normalizedInput.quantity);
 
     const created = await tx.cartItem.create({
       data: {
         cartId,
-        quantity: input.quantity,
+        quantity: normalizedInput.quantity,
         unitAmountMinor: unitPrice.amountMinor,
-        totalAmountMinor: unitPrice.amountMinor * input.quantity,
+        totalAmountMinor: unitPrice.amountMinor * normalizedInput.quantity,
         currency: unitPrice.currency,
         selectedOptions: normalizedOptions,
-        productVariantId: input.productVariantId,
-        menuItemId: input.menuItemId
+        productVariantId: normalizedInput.productVariantId,
+        menuItemId: normalizedInput.menuItemId
       }
     });
 
@@ -221,8 +230,11 @@ export async function mergeCarts(guestId: string, userId: string) {
   return userCart;
 }
 
-export async function calculateCartTotals(cartId: string) {
-  const items = await prisma.cartItem.findMany({ where: { cartId } });
+export async function calculateCartTotals(
+  cartId: string,
+  dbClient: Prisma.TransactionClient | typeof prisma = prisma
+) {
+  const items = await dbClient.cartItem.findMany({ where: { cartId } });
   let subtotal = new Money(0, items[0]?.currency ?? env.BASE_CURRENCY);
 
   for (const item of items) {
@@ -238,7 +250,7 @@ export async function calculateCartTotals(cartId: string) {
 }
 
 async function refreshCartTotals(tx: Prisma.TransactionClient, cartId: string) {
-  const totals = await calculateCartTotals(cartId);
+  const totals = await calculateCartTotals(cartId, tx);
   await tx.cart.update({
     where: { id: cartId },
     data: {
@@ -251,28 +263,24 @@ async function refreshCartTotals(tx: Prisma.TransactionClient, cartId: string) {
 
 async function resolveItemPricing(input: CartItemInput, currency: string) {
   if (input.productVariantId) {
-    const variant = await prisma.productVariant.findUnique({
-      where: { id: input.productVariantId }
-    });
+    const variant = await resolveProductVariantRecord(input.productVariantId);
     if (!variant || !variant.isActive) throw new Error("Product unavailable");
     return resolveProductVariantPrice({
-      productVariantId: input.productVariantId,
+      productVariantId: variant.id,
       currency
     });
   }
 
   if (input.menuItemId) {
-    const menuItem = await prisma.menuItem.findUnique({
-      where: { id: input.menuItemId }
-    });
+    const menuItem = await resolveMenuItemRecord(input.menuItemId);
     if (!menuItem || !menuItem.isAvailable) throw new Error("Menu item unavailable");
     const basePrice = await resolveMenuItemPrice({
-      menuItemId: input.menuItemId,
+      menuItemId: menuItem.id,
       currency
     });
 
     const modifierAmount = await resolveModifierPrice({
-      menuItemId: input.menuItemId,
+      menuItemId: menuItem.id,
       optionIds: input.selectedOptions ?? [],
       currency
     });
@@ -285,27 +293,23 @@ async function resolveItemPricing(input: CartItemInput, currency: string) {
 
 async function validateAvailability(input: CartItemInput, quantity: number) {
   if (input.productVariantId) {
-    const variant = await prisma.productVariant.findUnique({
-      where: { id: input.productVariantId }
-    });
+    const variant = await resolveProductVariantRecord(input.productVariantId);
     if (!variant || !variant.isActive) throw new Error("Product unavailable");
     const available = variant.stockOnHand - variant.stockReserved;
     if (available < quantity) throw new Error("Insufficient stock");
   }
 
   if (input.menuItemId) {
-    const menuItem = await prisma.menuItem.findUnique({
-      where: { id: input.menuItemId }
-    });
+    const menuItem = await resolveMenuItemRecord(input.menuItemId);
     if (!menuItem || !menuItem.isAvailable) throw new Error("Menu item unavailable");
 
     const availableNow = await isMenuItemAvailable({
-      menuItemId: input.menuItemId
+      menuItemId: menuItem.id
     });
     if (!availableNow) throw new Error("Menu item unavailable");
 
     await validateModifierSelection({
-      menuItemId: input.menuItemId,
+      menuItemId: menuItem.id,
       optionIds: input.selectedOptions ?? []
     });
   }
@@ -378,6 +382,49 @@ async function validateModifierSelection(params: {
       throw new Error("Invalid modifier option");
     }
   }
+}
+
+async function normalizeCartItemIdentifiers(input: CartItemInput): Promise<CartItemInput> {
+  let normalizedMenuItemId = input.menuItemId;
+  let normalizedProductVariantId = input.productVariantId;
+
+  if (input.menuItemId) {
+    const menuItem = await resolveMenuItemRecord(input.menuItemId);
+    if (!menuItem) throw new Error("Menu item unavailable");
+    normalizedMenuItemId = menuItem.id;
+  }
+
+  if (input.productVariantId) {
+    const variant = await resolveProductVariantRecord(input.productVariantId);
+    if (!variant) throw new Error("Product unavailable");
+    normalizedProductVariantId = variant.id;
+  }
+
+  return {
+    ...input,
+    menuItemId: normalizedMenuItemId,
+    productVariantId: normalizedProductVariantId
+  };
+}
+
+async function resolveMenuItemRecord(identifier: string) {
+  const catalogItem = await getCatalogService().findMenuItemBySlug(identifier);
+  const normalized = catalogItem?.slug ?? slugify(identifier);
+  return prisma.menuItem.findFirst({
+    where: {
+      OR: [{ id: identifier }, { slug: normalized }]
+    }
+  });
+}
+
+async function resolveProductVariantRecord(identifier: string) {
+  const catalogProduct = await getCatalogService().findMarketProductBySkuOrSlug(identifier);
+  const normalizedSku = catalogProduct?.variant.sku ?? identifier;
+  return prisma.productVariant.findFirst({
+    where: {
+      OR: [{ id: identifier }, { sku: normalizedSku }]
+    }
+  });
 }
 
 async function resolveModifierPrice(params: {

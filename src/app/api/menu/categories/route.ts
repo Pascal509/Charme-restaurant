@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
-import { listMenuCategories } from "@/features/menu/services/adminMenuService";
+import { buildRuntimeMenuCategories } from "@/lib/catalog";
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const menuId = url.searchParams.get("menuId") ?? undefined;
-
-  const categories = await listMenuCategories({ menuId, includeItems: false });
-
+  const categories = await buildRuntimeMenuCategories();
   return NextResponse.json({
     categories: categories.map((category) => ({
       id: category.id,

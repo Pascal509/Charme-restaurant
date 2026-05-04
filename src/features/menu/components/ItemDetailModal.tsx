@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MenuItem } from "@/features/menu/types";
+import ImageWrapper from "@/components/ui/ImageWrapper";
 import {
   StarRatingDisplay,
   StarRatingInput,
@@ -26,6 +26,9 @@ type ReviewsResponse = {
   canReview: boolean;
   hasReviewed: boolean;
 };
+
+const blurData =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB2aWV3Qm94PSIwIDAgNCA0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMxMTExMTEiLz48L3N2Zz4=";
 
 export default function ItemDetailModal({
   item,
@@ -93,54 +96,56 @@ export default function ItemDetailModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/50 px-4 py-8 transition-opacity">
-      <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-brand-rice shadow-crisp">
-        <div className="relative h-56 w-full bg-brand-ink/5 sm:h-72">
-          {item.imageUrl ? (
-            <Image
-              src={item.imageUrl}
-              alt={item.name}
-              fill
-              sizes="(max-width: 768px) 100vw, 60vw"
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-brand-ink/50">
-              No image
-            </div>
-          )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm transition-opacity animate-fade-in">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-brand-gold/10 bg-brand-obsidian shadow-crisp animate-soft-scale">
+        <ImageWrapper
+          src={item.imageUrl}
+          alt={item.name}
+          aspect="menu"
+          sizes="(max-width: 768px) 100vw, 60vw"
+          blurDataURL={blurData}
+          className="w-full mb-6"
+          objectPositionClassName={getMenuObjectPosition(item.name)}
+          fallbackLabel="No image"
+        >
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-brand-ink"
+            className="absolute right-4 top-4 rounded-full border border-brand-gold/30 bg-black/70 px-4 py-2 text-xs font-semibold text-brand-gold"
           >
             Close
           </button>
-        </div>
-        <div className="space-y-6 p-6">
+          <div className="absolute bottom-6 left-6">
+            <p className="text-xs uppercase tracking-[0.35em] text-brand-gold/80">Details</p>
+            <h3 className="mt-2 font-display text-3xl text-brand-ink sm:text-4xl">
+              {item.name}
+            </h3>
+          </div>
+        </ImageWrapper>
+        <div className="flex-1 space-y-6 overflow-y-auto p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-brand-ink/50">Details</p>
-              <h3 className="mt-2 text-2xl font-semibold text-brand-ink">{item.name}</h3>
               {item.description ? (
-                <p className="mt-2 text-sm text-brand-ink/70">{item.description}</p>
+                <p className="mt-2 text-sm text-brand-ink/70 sm:text-base">
+                  {item.description}
+                </p>
               ) : null}
             </div>
             <div className="text-right">
-              <p className="text-xs text-brand-ink/60">From</p>
-              <p className="text-lg font-semibold text-brand-ink">
+              <p className="text-xs text-brand-gold/70">From</p>
+              <p className="text-lg font-semibold text-brand-gold">
                 {formatCurrency(item.priceMinor, item.currency)}
               </p>
             </div>
           </div>
 
           {item.modifierGroups && item.modifierGroups.length > 0 ? (
-            <div className="rounded-lg border border-brand-ink/10 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
+            <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-gold/70">
                 Modifiers
               </p>
-              <div className="mt-3 space-y-3">
+              <div className="mt-4 space-y-3">
                 {item.modifierGroups.map((group) => (
-                  <div key={group.id} className="rounded-md border border-brand-ink/10 px-3 py-2">
+                  <div key={group.id} className="rounded-xl border border-brand-gold/10 px-3 py-3">
                     <div className="flex items-center justify-between text-sm font-semibold text-brand-ink">
                       <span>{group.name}</span>
                       <span className="text-xs text-brand-ink/60">
@@ -149,7 +154,10 @@ export default function ItemDetailModal({
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-brand-ink/60">
                       {group.options.map((option) => (
-                        <span key={option.id} className="rounded-full bg-brand-ink/5 px-2 py-1">
+                        <span
+                          key={option.id}
+                          className="rounded-full border border-brand-gold/20 bg-black/40 px-3 py-1"
+                        >
                           {option.name}
                           {option.priceMinor
                             ? ` +${formatCurrency(option.priceMinor, option.currency ?? item.currency)}`
@@ -166,10 +174,10 @@ export default function ItemDetailModal({
             </div>
           ) : null}
 
-          <div className="rounded-lg border border-brand-ink/10 bg-white p-4">
+          <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold/70">
                   Reviews
                 </p>
                 <div className="mt-2 flex items-center gap-2 text-sm text-brand-ink/70">
@@ -185,7 +193,7 @@ export default function ItemDetailModal({
                 </div>
               </div>
               {reviewsQuery.data?.hasReviewed ? (
-                <span className="rounded-full bg-brand-ink/5 px-3 py-1 text-xs text-brand-ink/70">
+                <span className="rounded-full border border-brand-gold/20 bg-black/40 px-3 py-1 text-xs text-brand-ink/70">
                   Review submitted
                 </span>
               ) : null}
@@ -198,7 +206,7 @@ export default function ItemDetailModal({
             ) : reviewsQuery.data?.reviews.length ? (
               <div className="mt-4 space-y-3">
                 {reviewsQuery.data.reviews.map((review) => (
-                  <div key={review.id} className="rounded-md border border-brand-ink/10 px-3 py-2">
+                  <div key={review.id} className="rounded-xl border border-brand-gold/10 px-3 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm font-semibold text-brand-ink">
                         {review.user?.name || "Guest"}
@@ -219,8 +227,8 @@ export default function ItemDetailModal({
             )}
 
             {reviewsQuery.data?.canReview ? (
-              <div className="mt-4 border-t border-brand-ink/10 pt-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
+              <div className="mt-4 border-t border-brand-gold/10 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold/70">
                   Add a review
                 </p>
                 <div className="mt-3 flex items-center gap-2">
@@ -232,13 +240,13 @@ export default function ItemDetailModal({
                   onChange={(event) => setReviewComment(event.target.value)}
                   rows={3}
                   placeholder="Share a quick note (optional)"
-                  className="mt-3 w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
+                  className="mt-3 w-full rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink"
                 />
                 <div className="mt-3 flex items-center gap-3">
                   <button
                     onClick={() => reviewMutation.mutate()}
                     disabled={reviewRating === 0 || reviewMutation.isPending}
-                    className="rounded-md bg-brand-ink px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-ink/30"
+                    className="rounded-full bg-brand-gold px-4 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
                   >
                     {reviewMutation.isPending ? "Submitting" : "Submit review"}
                   </button>
@@ -253,8 +261,10 @@ export default function ItemDetailModal({
             ) : null}
           </div>
 
+        </div>
+        <div className="sticky bottom-0 z-20 border-t border-brand-gold/10 bg-brand-obsidian/95 px-6 py-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3 rounded-full border border-brand-ink/20 px-3 py-1 text-sm">
+            <div className="flex items-center gap-3 rounded-full border border-brand-gold/30 px-3 py-1 text-sm">
               <button
                 onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
                 className="text-brand-ink/70"
@@ -277,7 +287,7 @@ export default function ItemDetailModal({
               </p>
               <button
                 onClick={onConfirm}
-                className="rounded-md bg-brand-cinnabar px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-cinnabar/60"
+                className="rounded-full bg-brand-gold px-5 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
                 disabled={!item.isAvailable}
               >
                 Add to Cart
@@ -288,6 +298,12 @@ export default function ItemDetailModal({
       </div>
     </div>
   );
+}
+
+function getMenuObjectPosition(name: string) {
+  const text = name.toLowerCase();
+  const needsTopCrop = text.includes("soup") || text.includes("noodle") || text.includes("bowl");
+  return needsTopCrop ? "object-top" : "object-center";
 }
 
 function formatCurrency(amountMinor: number, currency: string) {

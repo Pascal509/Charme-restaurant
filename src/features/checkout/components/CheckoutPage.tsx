@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
+import SectionHero from "@/components/sections/SectionHero";
+import { images } from "@/config/images";
 import { useCartStore } from "@/store/useCartStore";
 import CheckoutAddressSection from "@/features/checkout/components/CheckoutAddressSection";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
@@ -286,23 +288,38 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="bg-brand-rice">
-      <Container className="py-10">
-        <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Checkout</p>
-          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">Complete your order</h1>
-          <p className="max-w-2xl text-sm text-brand-ink/70">
-            Confirm fulfillment details, review totals, and continue to payment.
-          </p>
-        </div>
+    <main className="bg-brand-obsidian text-brand-ink lux-gradient page-transition">
+      <Container className="py-16 lg:py-20">
+        <SectionHero
+          eyebrow="Checkout"
+          title="Complete your order"
+          subtitle="Confirm fulfillment details, review totals, and continue to payment."
+          imageUrl={images.cuisine}
+        >
+          <div className="flex flex-wrap gap-3">
+            {[
+              { step: "01", label: "Delivery" },
+              { step: "02", label: "Payment" },
+              { step: "03", label: "Review" }
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="flex items-center gap-3 rounded-full border border-brand-gold/20 bg-black/40 px-4 py-2 text-xs uppercase tracking-[0.3em] text-brand-gold"
+              >
+                <span className="text-[10px] text-brand-gold/70">{item.step}</span>
+                <span className="text-brand-ink/70">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </SectionHero>
       </Container>
 
-      <section className="border-t border-brand-ink/10">
-        <Container className="py-8">
+      <section className="border-t border-brand-gold/10">
+        <Container className="py-10">
           {cartQuery.isLoading ? (
             <CheckoutSkeleton />
           ) : cartQuery.isError ? (
-            <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
+            <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-sm text-brand-ink/70 shadow-soft">
               Unable to load checkout. Please try again.
             </div>
           ) : empty ? (
@@ -310,10 +327,21 @@ export default function CheckoutPage() {
           ) : (
             <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
               <div className="space-y-6">
-                <div className="rounded-lg border border-brand-ink/10 bg-white p-6 shadow-soft">
-                  <h2 className="text-lg font-semibold text-brand-ink">Fulfillment</h2>
+                <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 shadow-soft">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-brand-ink">Step 01 Delivery</h2>
+                    <span className="text-xs uppercase tracking-[0.3em] text-brand-gold/70">
+                      Fulfillment
+                    </span>
+                  </div>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <label className="flex items-center gap-3 rounded-md border border-brand-ink/10 px-3 py-3">
+                    <label
+                      className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition focus-within:ring-2 focus-within:ring-brand-gold/40 ${
+                        fulfillmentType === "PICKUP"
+                          ? "border-brand-gold/50 bg-brand-gold/10"
+                          : "border-brand-gold/10 bg-black/40"
+                      }`}
+                    >
                       <input
                         type="radio"
                         name="fulfillmentType"
@@ -326,7 +354,13 @@ export default function CheckoutPage() {
                         <p className="text-xs text-brand-ink/60">Collect from the restaurant</p>
                       </div>
                     </label>
-                    <label className="flex items-center gap-3 rounded-md border border-brand-ink/10 px-3 py-3">
+                    <label
+                      className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition focus-within:ring-2 focus-within:ring-brand-gold/40 ${
+                        fulfillmentType === "DELIVERY"
+                          ? "border-brand-gold/50 bg-brand-gold/10"
+                          : "border-brand-gold/10 bg-black/40"
+                      }`}
+                    >
                       <input
                         type="radio"
                         name="fulfillmentType"
@@ -352,29 +386,34 @@ export default function CheckoutPage() {
                     </div>
                   ) : (
                     <div className="mt-4 grid gap-3">
-                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
+                      <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                         Pickup Slot
                       </label>
                       <input
                         value={pickupSlotId}
                         onChange={(event) => setPickupSlotId(event.target.value)}
                         placeholder="Pickup slot ID (optional)"
-                        className="rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
+                        className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink transition focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
                       />
                     </div>
                   )}
                 </div>
 
-                <div className="rounded-lg border border-brand-ink/10 bg-white p-6 shadow-soft">
-                  <h2 className="text-lg font-semibold text-brand-ink">Payment</h2>
+                <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 shadow-soft">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-brand-ink">Step 02 Payment</h2>
+                    <span className="text-xs uppercase tracking-[0.3em] text-brand-gold/70">
+                      Provider
+                    </span>
+                  </div>
                   <div className="mt-4 grid gap-3">
-                    <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
+                    <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                       Provider
                     </label>
                     <select
                       value={paymentProvider}
                       onChange={(event) => setPaymentProvider(event.target.value as PaymentProvider)}
-                      className="rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
+                      className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink transition focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
                     >
                       <option value="STRIPE">Stripe</option>
                       <option value="FLUTTERWAVE">Flutterwave</option>
@@ -384,15 +423,21 @@ export default function CheckoutPage() {
               </div>
 
               <aside>
-                <div className="sticky top-24 space-y-4 rounded-lg border border-brand-ink/10 bg-white p-5 shadow-crisp">
+                <div className="sticky top-24 space-y-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-6 shadow-crisp">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-brand-ink">Order summary</h2>
+                    <h2 className="text-lg font-semibold text-brand-ink">Step 03 Review</h2>
                     <span className="text-xs text-brand-ink/60">{itemsCount} items</span>
                   </div>
 
+                  {validateMutation.isPending ? (
+                    <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-xs text-brand-ink/70">
+                      Updating totals...
+                    </div>
+                  ) : null}
+
                   {validationErrors.length > 0 ? (
-                    <div className="rounded-md border border-brand-cinnabar/30 bg-brand-cinnabar/5 px-3 py-2 text-sm text-brand-cinnabar">
-                      <p className="font-semibold">We need your attention</p>
+                    <div className="rounded-xl border border-brand-gold/20 bg-brand-gold/10 px-3 py-2 text-sm text-brand-ink">
+                      <p className="font-semibold">A few details need attention</p>
                       <ul className="mt-2 list-disc space-y-1 pl-4 text-xs">
                         {validationErrors.map((error) => (
                           <li key={error}>{error}</li>
@@ -402,13 +447,16 @@ export default function CheckoutPage() {
                   ) : null}
 
                   {activePromotions.length > 0 ? (
-                    <div className="rounded-md border border-brand-ink/10 bg-brand-rice px-3 py-2 text-xs text-brand-ink/70">
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-brand-ink/40">
+                    <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-xs text-brand-ink/70">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-brand-gold/60">
                         Active promotions
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {activePromotions.map((promo) => (
-                          <span key={promo.id} className="rounded-full bg-white px-2 py-1 text-[11px]">
+                          <span
+                            key={promo.id}
+                            className="rounded-full border border-brand-gold/20 bg-brand-gold/10 px-2 py-1 text-[11px] text-brand-gold"
+                          >
                             {promo.discountPercent ? `${promo.discountPercent}% OFF` : promo.label || "Special"}
                           </span>
                         ))}
@@ -416,19 +464,19 @@ export default function CheckoutPage() {
                     </div>
                   ) : null}
 
-                  <div className="rounded-md border border-brand-ink/10 bg-white px-3 py-3">
-                    <label className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">Coupon</label>
+                  <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3">
+                    <label className="text-xs uppercase tracking-[0.2em] text-brand-gold/60">Coupon</label>
                     <div className="mt-2 flex gap-2">
                       <input
                         value={couponCode}
                         onChange={(event) => setCouponCode(event.target.value)}
                         placeholder="Enter code"
-                        className="w-full rounded-md border border-brand-ink/15 px-3 py-2 text-sm text-brand-ink"
+                        className="w-full rounded-lg border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink transition focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
                       />
                       <button
                         onClick={() => applyCouponMutation.mutate()}
                         disabled={!couponCode.trim() || applyCouponMutation.isPending}
-                        className="rounded-md bg-brand-ink px-3 py-2 text-xs font-semibold text-white"
+                        className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-black"
                       >
                         {applyCouponMutation.isPending ? "Applying" : "Apply"}
                       </button>
@@ -455,66 +503,41 @@ export default function CheckoutPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm text-brand-ink/70">
                         <span>Subtotal</span>
-                        <span>
-                          {formatCurrency(
-                            displayTotals.subtotalAmountMinor,
-                            displayTotals.currency
-                          )}
-                        </span>
+                        <span>{formatCurrency(displayTotals.subtotalAmountMinor, displayTotals.currency)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm text-brand-ink/70">
                         <span>Tax</span>
-                        <span>
-                          {formatCurrency(
-                            displayTotals.taxAmountMinor,
-                            displayTotals.currency
-                          )}
-                        </span>
+                        <span>{formatCurrency(displayTotals.taxAmountMinor, displayTotals.currency)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm text-brand-ink/70">
                         <span>Delivery</span>
-                        <span>
-                          {formatCurrency(
-                            displayTotals.deliveryAmountMinor,
-                            displayTotals.currency
-                          )}
-                        </span>
+                        <span>{formatCurrency(displayTotals.deliveryAmountMinor, displayTotals.currency)}</span>
                       </div>
                       {displayTotals.discountAmountMinor ? (
                         <div className="flex items-center justify-between text-sm text-emerald-700">
                           <span>Discount</span>
-                          <span>
-                            -{formatCurrency(
-                              displayTotals.discountAmountMinor,
-                              displayTotals.currency
-                            )}
-                          </span>
+                          <span>-{formatCurrency(displayTotals.discountAmountMinor, displayTotals.currency)}</span>
                         </div>
                       ) : null}
-                      <div className="flex items-center justify-between border-t border-brand-ink/10 pt-3 text-base font-semibold text-brand-ink">
+                      <div className="flex items-center justify-between border-t border-brand-gold/10 pt-3 text-base font-semibold text-brand-ink">
                         <span>Total</span>
-                        <span>
-                          {formatCurrency(
-                            displayTotals.totalAmountMinor,
-                            displayTotals.currency
-                          )}
-                        </span>
+                        <span>{formatCurrency(displayTotals.totalAmountMinor, displayTotals.currency)}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-md border border-brand-ink/10 bg-brand-ink/5 px-3 py-3 text-sm text-brand-ink/70">
+                    <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3 text-sm text-brand-ink/70">
                       {validateMutation.isPending ? "Validating totals..." : "Totals will appear after validation."}
                     </div>
                   )}
 
                   {checkoutError ? (
-                    <div className="rounded-md border border-brand-cinnabar/30 bg-brand-cinnabar/5 px-3 py-2 text-sm text-brand-cinnabar">
+                    <div className="rounded-xl border border-brand-cinnabar/30 bg-brand-cinnabar/10 px-3 py-2 text-sm text-brand-cinnabar">
                       {checkoutError}
                     </div>
                   ) : null}
 
                   {fulfillmentType === "DELIVERY" && addressLoginRequired ? (
-                    <div className="rounded-md border border-brand-ink/10 bg-brand-ink/5 px-3 py-2 text-xs text-brand-ink/70">
+                    <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-xs text-brand-ink/70">
                       Delivery validation requires a signed-in account.
                     </div>
                   ) : null}
@@ -527,7 +550,7 @@ export default function CheckoutPage() {
                       validationErrors.length > 0 ||
                       (fulfillmentType === "DELIVERY" && (!addressId || addressLoginRequired))
                     }
-                    className="w-full rounded-md bg-brand-cinnabar px-4 py-3 text-center text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-cinnabar/60"
+                    className="w-full rounded-full bg-brand-gold px-4 py-3 text-center text-sm font-semibold text-black transition hover:shadow-soft disabled:cursor-not-allowed disabled:bg-brand-gold/40"
                   >
                     {checkoutMutation.isPending
                       ? "Starting payment..."
@@ -553,22 +576,24 @@ function CheckoutSkeleton() {
     <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
       <div className="space-y-4">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="h-40 rounded-lg bg-brand-ink/10" />
+          <div key={index} className="h-28 rounded-2xl bg-brand-ink/10 skeleton" />
         ))}
       </div>
-      <div className="h-64 rounded-lg bg-brand-ink/10" />
+      <div className="hidden lg:block">
+        <div className="h-48 rounded-2xl bg-brand-ink/10 skeleton" />
+      </div>
     </div>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-center text-sm text-brand-ink/70">
+    <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-center text-sm text-brand-ink/70 shadow-soft">
       <p className="text-base font-semibold text-brand-ink">Your cart is empty</p>
       <p className="mt-2">Browse the menu and add items to get started.</p>
       <Link
         href={`/${resolveLocale()}/${resolveCountry()}/menu`}
-        className="mt-4 inline-flex rounded-md bg-brand-cinnabar px-4 py-2 text-sm font-semibold text-white"
+        className="btn btn-gold mt-4 inline-flex"
       >
         Explore Menu
       </Link>

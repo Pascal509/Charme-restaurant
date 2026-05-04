@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Container from "@/components/layout/Container";
+import SectionHero from "@/components/sections/SectionHero";
+import { images } from "@/config/images";
 import { useCartStore } from "@/store/useCartStore";
 
 type OrderItem = {
@@ -123,15 +125,14 @@ export default function OrderHistoryPage({
   }
 
   return (
-    <main className="bg-brand-rice">
+    <main className="bg-brand-rice page-transition">
       <Container className="py-10">
-        <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Account</p>
-          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">Order history</h1>
-          <p className="max-w-2xl text-sm text-brand-ink/70">
-            Review past orders, track current deliveries, and reorder your favorites.
-          </p>
-        </div>
+        <SectionHero
+          eyebrow="Account"
+          title="Order history"
+          subtitle="Review past orders, track current deliveries, and reorder your favorites."
+          imageUrl={images.dining}
+        />
       </Container>
 
       <section className="border-t border-brand-ink/10">
@@ -235,7 +236,7 @@ function OrderSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="h-40 rounded-lg bg-brand-ink/10" />
+        <div key={index} className="h-40 rounded-lg bg-brand-ink/10 skeleton" />
       ))}
     </div>
   );

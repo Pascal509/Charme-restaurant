@@ -24,16 +24,16 @@ export default function ModifierDrawer({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-ink/50 px-4 pb-6 pt-10 transition-opacity">
-      <div className="w-full max-w-2xl rounded-2xl bg-brand-rice shadow-crisp">
-        <div className="flex items-center justify-between border-b border-brand-ink/10 px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 pb-6 pt-10 backdrop-blur-sm transition-opacity animate-fade-in">
+      <div className="w-full max-w-2xl rounded-3xl border border-brand-gold/10 bg-brand-obsidian shadow-crisp animate-soft-scale">
+        <div className="flex items-center justify-between border-b border-brand-gold/10 px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-brand-ink/50">Customize</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-brand-gold/70">Customize</p>
             <h3 className="text-lg font-semibold text-brand-ink">{item.name}</h3>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full border border-brand-ink/10 px-3 py-1 text-xs font-semibold text-brand-ink"
+            className="rounded-full border border-brand-gold/30 px-3 py-1 text-xs font-semibold text-brand-gold"
           >
             Close
           </button>
@@ -56,10 +56,10 @@ export default function ModifierDrawer({
                   return (
                     <label
                       key={option.id}
-                      className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm transition ${
+                        className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${
                         checked
-                          ? "border-brand-ink bg-brand-ink text-brand-rice"
-                          : "border-brand-ink/10 text-brand-ink"
+                            ? "border-brand-gold bg-brand-gold text-black"
+                            : "border-brand-gold/10 text-brand-ink"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export default function ModifierDrawer({
             <button
               onClick={onConfirm}
               disabled={missingRequired}
-              className="rounded-md bg-brand-cinnabar px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-cinnabar/60"
+              className="rounded-full bg-brand-gold px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
             >
               Add to Cart
             </button>

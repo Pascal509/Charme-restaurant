@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
+import ImageWrapper from "@/components/ui/ImageWrapper";
 import { useCartStore } from "@/store/useCartStore";
 
 const CART_ENDPOINT = "/api/cart";
@@ -19,6 +19,12 @@ type CartItem = {
   totalAmountMinor: number;
   currency: string;
   selectedOptions?: { optionIds?: string[] } | null;
+  menuItem?: {
+    title?: string | null;
+    description?: string | null;
+    imageUrl?: string | null;
+    isAvailable?: boolean | null;
+  } | null;
 };
 
 type CartResponse = {
@@ -44,6 +50,9 @@ type MenuItem = {
 type MenuCategory = {
   id: string;
   name: string;
+  description?: string | null;
+  displayOrder: number;
+  isActive: boolean;
   items: MenuItem[];
 };
 
@@ -96,18 +105,6 @@ export default function CartPage() {
     if (id) setGuestId(id);
   }, []);
 
-  const menuQuery = useQuery<MenuResponse>({
-    queryKey: ["menu"],
-    queryFn: async () => {
-      const response = await fetch("/api/menu");
-      if (!response.ok) throw new Error("Failed to load menu");
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
-
   const promotionsQuery = useQuery<PromotionsResponse>({
     queryKey: ["promotions"],
     queryFn: async () => {
@@ -140,14 +137,6 @@ export default function CartPage() {
     const count = cartQuery.data?.cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
     setItemCount(count);
   }, [cartQuery.data, setItemCount]);
-
-  const itemsById = useMemo(() => {
-    const map = new Map<string, MenuItem>();
-    menuQuery.data?.categories.forEach((category) => {
-      category.items.forEach((item) => map.set(item.id, item));
-    });
-    return map;
-  }, [menuQuery.data]);
 
   const updateMutation = useMutation({
     mutationFn: async (payload: { id: string; quantity: number }) => {
@@ -325,8 +314,8 @@ export default function CartPage() {
                 ) : null}
 
                 {cart?.items.map((item) => {
-                  const menuItem = item.menuItemId ? itemsById.get(item.menuItemId) : undefined;
-                  const name = menuItem?.name ?? "Item";
+                  const menuItem = item.menuItem ?? undefined;
+                  const name = menuItem?.title ?? "Item";
                   const description = menuItem?.description ?? "";
                   const imageUrl = menuItem?.imageUrl ?? null;
                   const unavailable = menuItem ? !menuItem.isAvailable : false;
@@ -334,27 +323,24 @@ export default function CartPage() {
                   return (
                     <div
                       key={item.id}
-                      className="flex flex-col gap-4 rounded-lg border border-brand-ink/10 bg-white p-4 shadow-soft sm:flex-row"
+                      className="group card-hover flex flex-col gap-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-5 shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-crisp sm:flex-row"
                     >
-                      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-brand-ink/5">
-                        {imageUrl ? (
-                          <Image
-                            src={imageUrl}
-                            alt={name}
-                            fill
-                            sizes="96px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-xs text-brand-ink/50">
-                            No image
-                          </div>
-                        )}
-                      </div>
+                      <ImageWrapper
+                        src={imageUrl}
+                        alt={name}
+                        aspect="menu"
+                        sizes="96px"
+                        className="w-24 flex-shrink-0 rounded-xl"
+                        imageClassName="transition duration-300 group-hover:scale-105"
+                        objectPositionClassName={getCartImagePosition(name)}
+                        fallbackLabel="No image"
+                      />
                       <div className="flex flex-1 flex-col gap-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <h3 className="text-base font-semibold text-brand-ink">{name}</h3>
+                            <h3 className="font-display text-base font-semibold text-brand-ink sm:text-lg">
+                              {name}
+                            </h3>
                             {description ? (
                               <p className="text-sm text-brand-ink/60">{description}</p>
                             ) : null}
@@ -362,7 +348,7 @@ export default function CartPage() {
                               <p className="mt-1 text-xs text-brand-cinnabar">Unavailable</p>
                             ) : null}
                           </div>
-                          <span className="text-sm font-semibold text-brand-ink">
+                          <span className="text-sm font-semibold text-brand-gold">
                             {formatCurrency(item.totalAmountMinor, item.currency)}
                           </span>
                         </div>
@@ -370,11 +356,11 @@ export default function CartPage() {
                         {renderOptions(item.selectedOptions)}
 
                         <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-2 rounded-full border border-brand-ink/20 px-3 py-1 text-sm">
+                          <div className="flex items-center gap-2 rounded-full border border-brand-gold/30 px-3 py-1 text-sm">
                             <button
                               onClick={() => updateMutation.mutate({ id: item.id, quantity: item.quantity - 1 })}
                               disabled={item.quantity <= 1 || updateMutation.isPending}
-                              className="text-brand-ink/70"
+                              className="text-brand-ink/70 transition hover:text-brand-gold"
                             >
                               -
                             </button>
@@ -384,7 +370,7 @@ export default function CartPage() {
                             <button
                               onClick={() => updateMutation.mutate({ id: item.id, quantity: item.quantity + 1 })}
                               disabled={updateMutation.isPending}
-                              className="text-brand-ink/70"
+                              className="text-brand-ink/70 transition hover:text-brand-gold"
                             >
                               +
                             </button>
@@ -392,7 +378,7 @@ export default function CartPage() {
                           <button
                             onClick={() => removeMutation.mutate(item.id)}
                             disabled={removeMutation.isPending}
-                            className="text-xs font-semibold text-brand-cinnabar"
+                            className="text-xs font-semibold text-brand-cinnabar transition hover:text-brand-cinnabar/80"
                           >
                             Remove
                           </button>
@@ -404,7 +390,7 @@ export default function CartPage() {
               </div>
 
               <aside className="hidden lg:block">
-                <div className="sticky top-24 space-y-4 rounded-lg border border-brand-ink/10 bg-white p-5 shadow-crisp">
+                <div className="sticky top-24 space-y-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-6 shadow-crisp">
                   <SummaryCard
                     cart={cart}
                     effectiveTotals={effectiveTotals}
@@ -429,7 +415,7 @@ export default function CartPage() {
       </section>
 
       {!empty && cart ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-ink/10 bg-brand-rice/95 p-4 shadow-crisp lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-gold/10 bg-brand-obsidian/95 p-4 shadow-crisp lg:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
             <div>
               <p className="text-xs text-brand-ink/60">Total</p>
@@ -439,7 +425,7 @@ export default function CartPage() {
             </div>
             <Link
               href={`/${resolveLocale()}/${resolveCountry()}/checkout`}
-              className="rounded-md bg-brand-cinnabar px-4 py-2 text-sm font-semibold text-white"
+              className="btn btn-gold"
             >
               Proceed to Checkout
             </Link>
@@ -479,13 +465,16 @@ function SummaryCard({
   return (
     <div className="space-y-3">
       {promotions.length > 0 ? (
-        <div className="rounded-md border border-brand-ink/10 bg-brand-rice px-3 py-2 text-xs text-brand-ink/70">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-brand-ink/40">
+        <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-xs text-brand-ink/70">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-brand-gold/60">
             Active promotions
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {promotions.map((promo) => (
-              <span key={promo.id} className="rounded-full bg-white px-2 py-1 text-[11px]">
+              <span
+                key={promo.id}
+                className="rounded-full border border-brand-gold/20 bg-brand-gold/10 px-2 py-1 text-[11px] text-brand-gold"
+              >
                 {promo.discountPercent ? `${promo.discountPercent}% OFF` : promo.label || "Special"}
               </span>
             ))}
@@ -493,19 +482,19 @@ function SummaryCard({
         </div>
       ) : null}
 
-      <div className="rounded-md border border-brand-ink/10 bg-white px-3 py-3">
-        <label className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">Coupon</label>
+      <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3">
+        <label className="text-xs uppercase tracking-[0.2em] text-brand-gold/60">Coupon</label>
         <div className="mt-2 flex gap-2">
           <input
             value={couponCode}
             onChange={(event) => setCouponCode(event.target.value)}
             placeholder="Enter code"
-            className="w-full rounded-md border border-brand-ink/15 px-3 py-2 text-sm text-brand-ink"
+            className="w-full rounded-lg border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink"
           />
           <button
             onClick={onApplyCoupon}
             disabled={!couponCode.trim() || isApplyingCoupon}
-            className="rounded-md bg-brand-ink px-3 py-2 text-xs font-semibold text-white"
+            className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-black"
           >
             {isApplyingCoupon ? "Applying" : "Apply"}
           </button>
@@ -535,13 +524,13 @@ function SummaryCard({
           <span>-{formatCurrency(discountAmount, effectiveTotals.currency)}</span>
         </div>
       ) : null}
-      <div className="flex items-center justify-between border-t border-brand-ink/10 pt-3 text-base font-semibold text-brand-ink">
+      <div className="flex items-center justify-between border-t border-brand-gold/10 pt-3 text-base font-semibold text-brand-ink">
         <span>Total</span>
         <span>{formatCurrency(effectiveTotals.totalAmountMinor, effectiveTotals.currency)}</span>
       </div>
       <Link
         href={`/${resolveLocale()}/${resolveCountry()}/checkout`}
-        className="block rounded-md bg-brand-cinnabar px-4 py-2 text-center text-sm font-semibold text-white"
+        className="block rounded-full bg-brand-gold px-4 py-2 text-center text-sm font-semibold text-black"
       >
         Proceed to Checkout
       </Link>
@@ -554,11 +543,11 @@ function CartSkeleton() {
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-28 rounded-lg bg-brand-ink/10" />
+          <div key={index} className="h-28 rounded-2xl bg-brand-ink/10 skeleton" />
         ))}
       </div>
       <div className="hidden lg:block">
-        <div className="h-48 rounded-lg bg-brand-ink/10" />
+        <div className="h-48 rounded-2xl bg-brand-ink/10 skeleton" />
       </div>
     </div>
   );
@@ -566,12 +555,12 @@ function CartSkeleton() {
 
 function EmptyState() {
   return (
-    <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-center text-sm text-brand-ink/70">
+    <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-center text-sm text-brand-ink/70 shadow-soft">
       <p className="text-base font-semibold text-brand-ink">Your cart is empty</p>
       <p className="mt-2">Browse the menu and add items to get started.</p>
       <Link
         href={`/${resolveLocale()}/${resolveCountry()}/menu`}
-        className="mt-4 inline-flex rounded-md bg-brand-cinnabar px-4 py-2 text-sm font-semibold text-white"
+        className="btn btn-gold mt-4 inline-flex"
       >
         Explore Menu
       </Link>
@@ -586,7 +575,7 @@ function renderOptions(selectedOptions?: { optionIds?: string[] } | null) {
   return (
     <div className="flex flex-wrap gap-2 text-xs text-brand-ink/60">
       {optionIds.map((id) => (
-        <span key={id} className="rounded-full bg-brand-ink/5 px-2 py-1">
+        <span key={id} className="rounded-full border border-brand-gold/15 bg-black/40 px-2 py-1">
           {id}
         </span>
       ))}
@@ -634,6 +623,12 @@ function resolveEffectiveTotals(cart: CartResponse["cart"] | null, couponTotals:
     totalAmountMinor: cart?.totalAmountMinor ?? 0,
     currency
   };
+}
+
+function getCartImagePosition(name: string) {
+  const text = name.toLowerCase();
+  const needsTopCrop = text.includes("soup") || text.includes("noodle") || text.includes("bowl");
+  return needsTopCrop ? "object-top" : "object-center";
 }
 
 function formatCurrency(amountMinor: number, currency: string) {

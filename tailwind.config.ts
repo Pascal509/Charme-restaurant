@@ -10,7 +10,9 @@ const config: Config = {
           jade: "var(--brand-jade)",
           ink: "var(--brand-ink)",
           rice: "var(--brand-rice)",
-          gold: "var(--brand-gold)"
+          gold: "var(--brand-gold)",
+          obsidian: "var(--brand-obsidian)",
+          seal: "var(--brand-seal)"
         }
       },
       fontFamily: {
@@ -19,9 +21,9 @@ const config: Config = {
         cjk: ["var(--font-cjk)", "sans-serif"]
       },
       boxShadow: {
-        soft: "0 10px 30px rgba(0, 0, 0, 0.08)",
-        crisp: "0 6px 16px rgba(0, 0, 0, 0.12)",
-        focus: "0 0 0 3px rgba(178, 34, 34, 0.3)"
+        soft: "0 20px 50px rgba(0, 0, 0, 0.35)",
+        crisp: "0 12px 30px rgba(0, 0, 0, 0.28)",
+        focus: "0 0 0 3px rgba(201, 169, 110, 0.35)"
       },
       borderRadius: {
         sm: "6px",
