@@ -37,29 +37,6 @@ type CartResponse = {
   } | null;
 };
 
-type MenuItem = {
-  id: string;
-  name: string;
-  description?: string | null;
-  priceMinor: number;
-  currency: string;
-  imageUrl?: string | null;
-  isAvailable: boolean;
-};
-
-type MenuCategory = {
-  id: string;
-  name: string;
-  description?: string | null;
-  displayOrder: number;
-  isActive: boolean;
-  items: MenuItem[];
-};
-
-type MenuResponse = {
-  categories: MenuCategory[];
-};
-
 type Promotion = {
   id: string;
   label?: string | null;

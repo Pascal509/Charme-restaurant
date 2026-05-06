@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cartValidationSchema } from "@/lib/validation/payloads";
-import { getActiveCart } from "@/features/cart/services/cartService";
+import { cartService } from "@/features/cart/services/cartService";
 import { validateCartForCheckout } from "@/features/checkout/services/checkoutService";
 
 export async function POST(request: Request) {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
     let cartId = payload.cartId ?? null;
     if (!cartId) {
-      const cart = await getActiveCart({
+      const cart = await cartService.getActiveCart({
         userId: payload.userId,
         guestId: payload.guestId
       });

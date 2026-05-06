@@ -39,7 +39,7 @@ type CartResponse = {
 
 type FulfillmentType = "DELIVERY" | "PICKUP";
 
-type PaymentProvider = "STRIPE" | "FLUTTERWAVE";
+type PaymentProvider = "FLUTTERWAVE" | "PAYSTACK";
 
 type Promotion = {
   id: string;
@@ -73,11 +73,15 @@ type CouponApplyResponse = {
   currency?: string;
 };
 
-export default function CheckoutPage() {
+type CheckoutPageProps = {
+  defaultPaymentProvider: PaymentProvider;
+};
+
+export default function CheckoutPage({ defaultPaymentProvider }: CheckoutPageProps) {
   const [guestId, setGuestId] = useState<string | null>(null);
   const { userId } = useUserIdentity();
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>("PICKUP");
-  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("STRIPE");
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>(defaultPaymentProvider);
   const [addressId, setAddressId] = useState<string | null>(null);
   const [pickupSlotId, setPickupSlotId] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -415,8 +419,8 @@ export default function CheckoutPage() {
                       onChange={(event) => setPaymentProvider(event.target.value as PaymentProvider)}
                       className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink transition focus:outline-none focus:ring-2 focus:ring-brand-gold/40"
                     >
-                      <option value="STRIPE">Stripe</option>
                       <option value="FLUTTERWAVE">Flutterwave</option>
+                      <option value="PAYSTACK">Paystack (Coming soon)</option>
                     </select>
                   </div>
                 </div>

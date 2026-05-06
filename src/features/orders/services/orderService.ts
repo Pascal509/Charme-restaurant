@@ -32,3 +32,30 @@ export async function cancelOrder(orderId: string, tx?: Prisma.TransactionClient
     return order;
   });
 }
+
+export async function failOrder(orderId: string, tx?: Prisma.TransactionClient) {
+  const update = async (client: Prisma.TransactionClient) => {
+    const order = await client.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    if (order.status === "FAILED") {
+      return order;
+    }
+
+    const updated = await client.order.update({
+      where: { id: orderId },
+      data: { status: "FAILED", paymentStatus: "FAILED" }
+    });
+
+    await releaseReservation({ orderId, tx: client });
+    return updated;
+  };
+
+  if (tx) {
+    return update(tx);
+  }
+
+  return prisma.$transaction((client) => update(client));
+}

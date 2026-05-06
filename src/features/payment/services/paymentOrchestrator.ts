@@ -12,12 +12,14 @@ export async function createPaymentSessionWithFallback(params: {
   countryCode: string;
   settlementCurrency: string;
   allowedProviders: PaymentProvider[];
+  defaultProvider?: PaymentProvider | null;
   preferredProvider?: PaymentProvider | null;
   weights?: Record<string, number> | null;
 }) {
   const primary = await selectPaymentProvider({
     allowedProviders: params.allowedProviders,
     settlementCurrency: params.settlementCurrency,
+    defaultProvider: params.defaultProvider,
     preferredProvider: params.preferredProvider,
     weights: params.weights,
     countryCode: params.countryCode

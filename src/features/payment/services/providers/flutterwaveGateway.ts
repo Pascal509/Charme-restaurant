@@ -3,6 +3,19 @@ import { env } from "@/lib/env";
 import type { PaymentGateway, PaymentSessionRequest, PaymentSessionResponse } from "@/features/payment/services/paymentGateway";
 import { Money } from "@/lib/money";
 
+export type FlutterwaveVerificationResponse = {
+  status: string;
+  message?: string;
+  data: {
+    id: number;
+    tx_ref?: string;
+    flw_ref?: string;
+    amount: number;
+    currency: string;
+    status: string;
+  };
+};
+
 type FlutterwaveClient = {
   Payment: {
     create: (payload: Record<string, unknown>) => Promise<{ data: { link: string; id: string } }>;
@@ -49,6 +62,26 @@ export class FlutterwaveGateway implements PaymentGateway {
       redirectUrl: response.data.link
     };
   }
+}
+
+export async function verifyFlutterwaveTransaction(transactionId: string) {
+  if (!env.FLUTTERWAVE_SECRET_KEY) {
+    throw new Error("Flutterwave credentials missing");
+  }
+
+  const response = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {
+    headers: {
+      Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY}`,
+      Accept: "application/json"
+    }
+  });
+
+  const body = (await response.json()) as Partial<FlutterwaveVerificationResponse>;
+  if (!response.ok || body.status !== "success" || !body.data) {
+    throw new Error(body.message ?? "Unable to verify Flutterwave transaction");
+  }
+
+  return body as FlutterwaveVerificationResponse;
 }
 
 export function verifyFlutterwaveSignature(signature: string | null) {

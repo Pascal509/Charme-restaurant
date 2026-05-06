@@ -346,7 +346,6 @@ export default function MarketPage({ categories }: MarketPageProps) {
                               <ProductCard
                                 key={product.id}
                                 product={product}
-                                categoryName={category.name}
                                 onAdd={(quantity) =>
                                   addMutation.mutate({
                                     productVariantId: product.variant.id,
@@ -386,12 +385,10 @@ export default function MarketPage({ categories }: MarketPageProps) {
 
 function ProductCard({
   product,
-  categoryName,
   onAdd,
   isAdding
 }: {
   product: MarketProduct;
-  categoryName: string;
   onAdd: (quantity: number) => void;
   isAdding: boolean;
 }) {

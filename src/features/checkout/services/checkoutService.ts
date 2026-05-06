@@ -16,6 +16,7 @@ import { validateMinimumOrder } from "@/features/restaurant/services/deliverySer
 import { calculateDeliveryFeeForAddress, validateAddressWithinDeliveryZone } from "@/features/addresses/services/deliveryEligibilityService";
 import { listPickupSlots } from "@/features/restaurant/services/pickupService";
 import { previewLoyaltyRedemption, applyLoyaltyRedemption } from "@/features/loyalty/services/loyaltyService";
+import { getDefaultPaymentProvider } from "@/features/payment/services/paymentConfig";
 
 const IDEMPOTENCY_TTL_MINUTES = 10;
 
@@ -52,7 +53,7 @@ export async function validateCartForCheckout(params: {
   cartId: string;
   userId?: string;
   orderType: "DELIVERY" | "PICKUP";
-  paymentProvider?: "STRIPE" | "FLUTTERWAVE";
+  paymentProvider?: "FLUTTERWAVE" | "PAYSTACK";
   userCountry?: string;
   billingCountry?: string;
   ipCountry?: string;
@@ -72,7 +73,7 @@ async function validateCartForCheckoutWithClient(
     cartId: string;
     userId?: string;
     orderType: "DELIVERY" | "PICKUP";
-    paymentProvider?: "STRIPE" | "FLUTTERWAVE";
+    paymentProvider?: "FLUTTERWAVE" | "PAYSTACK";
     userCountry?: string;
     billingCountry?: string;
     ipCountry?: string;
@@ -287,7 +288,7 @@ export async function createOrderFromCart(params: {
   userId?: string;
   orderType: "DELIVERY" | "PICKUP";
   idempotencyKey: string;
-  paymentProvider?: "STRIPE" | "FLUTTERWAVE";
+  paymentProvider?: "FLUTTERWAVE" | "PAYSTACK";
   userCountry?: string;
   billingCountry?: string;
   ipCountry?: string;
@@ -507,6 +508,7 @@ export async function createOrderFromCart(params: {
       countryCode: result.countryConfig.countryCode,
       settlementCurrency: result.order.settlementCurrency,
       allowedProviders: result.countryConfig.allowedProviders,
+      defaultProvider: getDefaultPaymentProvider(),
       preferredProvider: result.countryConfig.preferredProvider,
       weights: result.countryConfig.paymentProviderWeights
     });

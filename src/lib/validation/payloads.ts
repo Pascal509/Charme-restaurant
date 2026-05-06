@@ -43,7 +43,7 @@ export const checkoutSchema = z.object({
   cartId: z.string().min(1),
   orderType: z.enum(["DELIVERY", "PICKUP"]),
   idempotencyKey: z.string().min(8),
-  paymentProvider: z.enum(["STRIPE", "FLUTTERWAVE"]),
+  paymentProvider: z.enum(["FLUTTERWAVE", "PAYSTACK"]),
   addressId: z.string().min(1).optional()
 });
 
@@ -53,7 +53,7 @@ export const cartValidationSchema = z
     guestId: z.string().min(1).optional(),
     userId: z.string().min(1).optional(),
     fulfillmentType: z.enum(["DELIVERY", "PICKUP"]),
-    paymentProvider: z.enum(["STRIPE", "FLUTTERWAVE"]).optional(),
+    paymentProvider: z.enum(["FLUTTERWAVE", "PAYSTACK"]).optional(),
     addressId: z.string().min(1).optional(),
     pickupSlotId: z.string().min(1).optional(),
     userCountry: z.string().min(2).optional(),
@@ -71,7 +71,7 @@ export const checkoutSessionSchema = z
     cartId: z.string().min(1).optional(),
     guestId: z.string().min(1).optional(),
     userId: z.string().min(1).optional(),
-    paymentProvider: z.enum(["STRIPE", "FLUTTERWAVE"]),
+    paymentProvider: z.enum(["FLUTTERWAVE", "PAYSTACK"]),
     fulfillmentType: z.enum(["DELIVERY", "PICKUP"]),
     addressId: z.string().min(1).optional(),
     pickupSlotId: z.string().min(1).optional(),
@@ -92,7 +92,7 @@ export const loyaltyRedeemSchema = z
     guestId: z.string().min(1).optional(),
     userId: z.string().min(1).optional(),
     fulfillmentType: z.enum(["DELIVERY", "PICKUP"]),
-    paymentProvider: z.enum(["STRIPE", "FLUTTERWAVE"]).optional(),
+    paymentProvider: z.enum(["FLUTTERWAVE", "PAYSTACK"]).optional(),
     addressId: z.string().min(1).optional(),
     pickupSlotId: z.string().min(1).optional(),
     userCountry: z.string().min(2).optional(),

@@ -1,4 +1,4 @@
-export type PaymentProvider = "STRIPE" | "FLUTTERWAVE";
+export type PaymentProvider = "FLUTTERWAVE" | "PAYSTACK";
 
 export type PaymentEventType =
 	| "PaymentConfirmed"

@@ -21,9 +21,9 @@ export default function HomePage({
         <Container>
           <div className="space-y-8">
             <div className="max-w-2xl">
-              <p className="seal-badge">Chef's Specials</p>
+              <p className="seal-badge">Chef&apos;s Specials</p>
               <h2 className="mt-4 text-2xl text-brand-ink sm:text-3xl lg:text-4xl">
-                Chef's Signature Dishes
+                Chef&apos;s Signature Dishes
               </h2>
               <p className="mt-4 text-sm text-brand-ink/70 sm:text-base">
                 A curated set of refined dishes that show the depth, warmth, and precision of
@@ -51,7 +51,7 @@ export default function HomePage({
                     <div className="absolute inset-0 bg-brand-gold/10 mix-blend-soft-light" />
                     <div className="absolute bottom-0 left-0 right-0 p-5">
                       <p className="text-xs uppercase tracking-[0.3em] text-brand-gold/80">
-                        Chef's Experience
+                        Chef&apos;s Experience
                       </p>
                       <h3 className="mt-2 font-display text-xl text-brand-ink">{card.title}</h3>
                       <p className="mt-2 text-sm text-brand-ink/70">{card.description}</p>
@@ -121,7 +121,7 @@ export default function HomePage({
               </div>
               <div className="group relative overflow-hidden bg-black/50">
                 <ImageWrapper
-                  src="/images/take-away3.jpg"
+                  src="/images/Take-away.jpg"
                   alt="Supermarket shelves"
                   sizes="(max-width: 1024px) 100vw, 700px"
                   blurDataURL={blurData}

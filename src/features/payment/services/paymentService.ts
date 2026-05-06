@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { cancelOrder } from "@/features/orders/services/orderService";
+import { failOrder } from "@/features/orders/services/orderService";
 import { emitDomainEvent } from "@/lib/events/eventService";
 import { recordWebhookEvent } from "@/features/payment/services/webhookEventService";
 import { log } from "@/lib/logger";
@@ -131,12 +131,13 @@ export async function updatePaymentFromWebhook(params: {
   provider: PaymentProvider;
   eventId: string;
   providerPaymentId: string;
+  reference?: string | null;
   status: "PAID" | "FAILED" | "PENDING";
   amountMinor: number;
   currency: string;
   payload: string;
 }) {
-  const { provider, eventId, providerPaymentId, status, amountMinor, currency, payload } = params;
+  const { provider, eventId, providerPaymentId, reference, status, amountMinor, currency, payload } = params;
 
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const recorded = await recordWebhookEvent({ provider, eventId, payload, tx });
@@ -153,10 +154,12 @@ export async function updatePaymentFromWebhook(params: {
       where: { provider, providerPaymentId }
     });
 
-    if (!payment && provider === "STRIPE") {
-      payment = await tx.payment.findFirst({
-        where: { provider, reference: providerPaymentId }
-      });
+    if (!payment && reference) {
+      payment = await tx.payment.findFirst({ where: { provider, reference } });
+    }
+
+    if (!payment) {
+      payment = await tx.payment.findFirst({ where: { provider, reference: providerPaymentId } });
     }
 
     if (!payment) {
@@ -237,18 +240,12 @@ export async function updatePaymentFromWebhook(params: {
         data: { status: "FAILED" }
       });
 
-      await cancelOrder(order.id, tx);
+      await failOrder(order.id, tx);
       await reverseRedemptionForOrder({ orderId: order.id, tx });
 
       await emitDomainEvent({
         type: "PaymentFailed",
         payload: { orderId: order.id, paymentId: payment.id },
-        tx
-      });
-
-      await emitDomainEvent({
-        type: "OrderCancelled",
-        payload: { orderId: order.id },
         tx
       });
     }

@@ -12,13 +12,10 @@ export const envSchema = z.object({
   CATALOG_READ_SOURCE: z.enum(["static", "prisma"]).default("static"),
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
-  STRIPE_SECRET_KEY: optionalString,
-  STRIPE_WEBHOOK_SECRET: optionalString,
-  STRIPE_SUCCESS_URL: z.preprocess(
-    (value) => (value === "" ? undefined : value),
-    z.string().url().optional()
-  ),
-  STRIPE_CANCEL_URL: z.preprocess(
+  DEFAULT_PAYMENT_PROVIDER: z.enum(["FLUTTERWAVE", "PAYSTACK"]).default("FLUTTERWAVE"),
+  PAYSTACK_PUBLIC_KEY: optionalString,
+  PAYSTACK_SECRET_KEY: optionalString,
+  PAYSTACK_REDIRECT_URL: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().url().optional()
   ),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { idParamSchema } from "@/lib/validation/requests";
 import { updateCartItemSchema } from "@/lib/validation/payloads";
-import { updateCartItemQuantity, removeCartItem } from "@/features/cart/services/cartService";
+import { cartService } from "@/features/cart/services/cartService";
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
   try {
@@ -9,7 +9,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     const body = await request.json();
     const payload = updateCartItemSchema.parse(body);
 
-    const item = await updateCartItemQuantity(params.id, payload.quantity);
+    const item = await cartService.updateCartItemQuantity(params.id, payload.quantity);
     return NextResponse.json({ item });
   } catch (error) {
     return NextResponse.json(
@@ -22,7 +22,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
 export async function DELETE(_request: Request, context: { params: { id: string } }) {
   try {
     const params = idParamSchema.parse(context.params);
-    const item = await removeCartItem(params.id);
+    const item = await cartService.removeCartItem(params.id);
     return NextResponse.json({ item });
   } catch (error) {
     return NextResponse.json(

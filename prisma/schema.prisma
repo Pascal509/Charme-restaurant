@@ -39,8 +39,8 @@ enum PaymentStatus {
 }
 
 enum PaymentProvider {
-  STRIPE
   FLUTTERWAVE
+  PAYSTACK
 }
 
 enum PaymentAttemptStatus {

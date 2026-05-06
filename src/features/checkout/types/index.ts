@@ -25,7 +25,7 @@ export type CheckoutSessionRequest = {
   cartId?: string;
   guestId?: string;
   userId?: string;
-  paymentProvider: "STRIPE" | "FLUTTERWAVE";
+  paymentProvider: "FLUTTERWAVE" | "PAYSTACK";
   fulfillmentType: "DELIVERY" | "PICKUP";
   addressId?: string;
   pickupSlotId?: string;

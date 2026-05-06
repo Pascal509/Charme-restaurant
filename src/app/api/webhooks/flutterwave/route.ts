@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyFlutterwaveSignature } from "@/features/payment/services/providers/flutterwaveGateway";
-import { updatePaymentFromWebhook } from "@/features/payment/services/paymentService";
-import { Money } from "@/lib/money";
+import { processFlutterwaveCallback } from "@/features/payment/services/flutterwaveCallbackService";
 import { log } from "@/lib/logger";
 
 export async function POST(request: Request) {
@@ -18,32 +17,21 @@ export async function POST(request: Request) {
     event: string;
     data: {
       id: number;
-      amount: number;
-      currency: string;
-      status: string;
       tx_ref?: string;
     };
   };
 
-  const status = body.data.status === "successful" ? "PAID" : "FAILED";
-
-  const money = Money.fromMajor(body.data.amount, body.data.currency.toUpperCase());
-
-  const result = await updatePaymentFromWebhook({
-    provider: "FLUTTERWAVE",
-    eventId: String(body.data.id),
-    providerPaymentId: String(body.data.id),
-    status,
-    amountMinor: money.amountMinor,
-    currency: body.data.currency.toUpperCase(),
+  const result = await processFlutterwaveCallback({
+    transactionId: String(body.data.id),
+    reference: body.data.tx_ref ?? null,
     payload
   });
 
   log("info", "Flutterwave webhook processed", {
-    eventId: String(body.data.id),
-    providerPaymentId: String(body.data.id),
-    status,
-    result: result.status
+    eventId: result.transactionId,
+    reference: result.reference,
+    status: result.status,
+    result: result.updateStatus
   });
 
   return NextResponse.json({ received: true });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addCartItem, getOrCreateCart } from "@/features/cart/services/cartService";
+import { cartService } from "@/features/cart/services/cartService";
 import { addCartItemSchema, cartOwnerSchema } from "@/lib/validation/payloads";
 
 export async function POST(request: Request) {
@@ -11,8 +11,8 @@ export async function POST(request: Request) {
     });
     const payload = addCartItemSchema.parse(body);
 
-    const cart = await getOrCreateCart(owner);
-    const item = await addCartItem(cart.id, {
+    const cart = await cartService.getOrCreateCart(owner);
+    const item = await cartService.addCartItem(cart.id, {
       productVariantId: payload.productVariantId,
       menuItemId: payload.menuItemId,
       quantity: payload.quantity,

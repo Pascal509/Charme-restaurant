@@ -7,8 +7,42 @@ import { isMenuItemAvailable } from "@/features/menu/services/menuService";
 import { convertFromBase, convertToBase } from "@/lib/fx/fxService";
 import { env } from "@/lib/env";
 import { getCatalogService, slugify } from "@/lib/catalog";
+import * as memoryCart from "./memoryCartService";
 
 const MAX_ITEM_QTY = 20;
+
+/**
+ * Factory to get the appropriate cart service based on catalog read source.
+ * When CATALOG_READ_SOURCE=static, uses in-memory cart (no DB dependency).
+ * When CATALOG_READ_SOURCE=prisma, uses Prisma (requires database).
+ */
+export const cartService = (() => {
+  const isStaticMode = env.CATALOG_READ_SOURCE === "static";
+  
+  if (isStaticMode) {
+    console.info("[CartService] Running in STATIC mode (in-memory cart, no database)");
+    return {
+      getOrCreateCart: memoryCart.getOrCreateCart,
+      getActiveCart: memoryCart.getActiveCart,
+      addCartItem: memoryCart.addCartItem,
+      removeCartItem: memoryCart.removeCartItem,
+      clearCart: memoryCart.clearCart,
+      updateCartItemQuantity: memoryCart.updateCartItemQuantity,
+      mergeCarts: memoryCart.mergeCarts
+    };
+  } else {
+    console.info("[CartService] Running in PRISMA mode (database-backed cart)");
+    return {
+      getOrCreateCart,
+      getActiveCart,
+      addCartItem,
+      removeCartItem,
+      clearCart,
+      updateCartItemQuantity,
+      mergeCarts
+    };
+  }
+})();
 
 export async function getOrCreateCart(params: {
   userId?: string;

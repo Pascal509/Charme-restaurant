@@ -4,6 +4,7 @@ import { isProviderDisabled } from "@/features/payment/services/providerMetricsS
 export type PaymentRoutingInput = {
   allowedProviders: PaymentProvider[];
   settlementCurrency: string;
+  defaultProvider?: PaymentProvider | null;
   preferredProvider?: PaymentProvider | null;
   weights?: Record<string, number> | null;
   countryCode: string;
@@ -27,6 +28,10 @@ export async function selectPaymentProvider(input: PaymentRoutingInput) {
 
   if (eligible.length === 0) {
     return input.allowedProviders[0];
+  }
+
+  if (input.defaultProvider && eligible.includes(input.defaultProvider)) {
+    return input.defaultProvider;
   }
 
   if (input.preferredProvider && eligible.includes(input.preferredProvider)) {

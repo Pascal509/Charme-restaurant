@@ -152,6 +152,10 @@ export function slugify(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 class StaticCatalogService implements CatalogService {
   private readonly menuCategories = menuCatalog.map((category, categoryIndex) => ({
     id: slugify(category.name),
@@ -235,7 +239,7 @@ class StaticCatalogService implements CatalogService {
 
 class PrismaCatalogService implements CatalogService {
   // shared mapping helpers: transform prisma payloads into catalog shapes
-  private mapMenuCategory(category: any, idx = 0): CatalogMenuCategory {
+  private mapMenuCategory(category: { id?: string; name: string; slug?: string; description?: string | null; displayOrder?: number; isActive?: boolean; items?: Array<{ menuItem?: { slug?: string; title?: string; description?: string | null; baseAmountMinor?: number; baseCurrency?: string; imageUrl?: string | null; isAvailable?: boolean; preparationTimeMins?: number | null } | null; title?: string }> }, idx = 0): CatalogMenuCategory {
     return {
       id: category.id ?? slugify(category.name),
       slug: category.slug ?? slugify(category.name),
@@ -243,7 +247,7 @@ class PrismaCatalogService implements CatalogService {
       description: category.description ?? null,
       displayOrder: category.displayOrder ?? idx + 1,
       isActive: Boolean(category.isActive),
-      items: (category.items ?? []).map((entry: any) => ({
+      items: (category.items ?? []).map((entry: { menuItem?: { slug?: string; title?: string; description?: string | null; baseAmountMinor?: number; baseCurrency?: string; imageUrl?: string | null; isAvailable?: boolean; preparationTimeMins?: number | null } | null; title?: string }) => ({
         id: entry.menuItem?.slug ?? slugify(entry.menuItem?.title ?? entry.title ?? ""),
         slug: entry.menuItem?.slug ?? slugify(entry.menuItem?.title ?? entry.title ?? ""),
         name: entry.menuItem?.title ?? entry.title ?? "",
@@ -259,23 +263,35 @@ class PrismaCatalogService implements CatalogService {
     };
   }
 
-  private mapMarketProduct(link: any): CatalogMarketProduct | null {
-    const product = link.product ?? link;
-    const variant = (product.variants && product.variants[0]) ?? link.variant ?? null;
-    if (!variant) return null;
+  private mapMarketProduct(link: unknown): CatalogMarketProduct | null {
+    if (!isRecord(link)) return null;
+
+    const product = isRecord(link.product) ? link.product : null;
+    const variant = product && Array.isArray(product.variants) ? product.variants[0] : isRecord(link.variant) ? link.variant : null;
+    if (!product || !variant) return null;
+
+    const productSlug = typeof product.slug === "string" ? product.slug : undefined;
+    const productTitle = typeof product.title === "string" ? product.title : undefined;
+    const productName = typeof product.name === "string" ? product.name : undefined;
+    const productDescription = typeof product.description === "string" ? product.description : undefined;
+    const variantId = typeof variant.id === "string" ? variant.id : undefined;
+    const variantSku = typeof variant.sku === "string" ? variant.sku : undefined;
+    const variantTitle = typeof variant.title === "string" ? variant.title : undefined;
+    const variantAmountMinor = typeof variant.baseAmountMinor === "number" ? variant.baseAmountMinor : 0;
+    const variantCurrency = typeof variant.baseCurrency === "string" ? variant.baseCurrency : "NGN";
 
     return {
-      id: product.slug ?? slugify(product.title ?? product.name ?? ""),
-      slug: product.slug ?? slugify(product.title ?? product.name ?? ""),
-      title: product.title ?? product.name ?? "",
-      description: product.description ?? product.title ?? "",
+      id: productSlug ?? slugify(productTitle ?? productName ?? ""),
+      slug: productSlug ?? slugify(productTitle ?? productName ?? ""),
+      title: productTitle ?? productName ?? "",
+      description: productDescription ?? productTitle ?? "",
       variant: {
-        id: variant.sku ?? variant.id,
-        sku: variant.sku ?? variant.id,
-        title: variant.title ?? "Standard",
-        amountMinor: variant.baseAmountMinor,
-        currency: variant.baseCurrency ?? "NGN",
-        stockOnHand: variant.stockOnHand ?? 0
+        id: variantSku ?? variantId ?? "",
+        sku: variantSku ?? variantId ?? "",
+        title: variantTitle ?? "Standard",
+        amountMinor: variantAmountMinor,
+        currency: variantCurrency,
+        stockOnHand: 0
       }
     };
   }
@@ -324,11 +340,11 @@ class PrismaCatalogService implements CatalogService {
         include: { products: { include: { product: { include: { variants: { where: { isActive: true }, orderBy: { createdAt: "asc" } } } } } } }
       });
 
-      return categories.map((cat: any) => ({
+      return categories.map((cat) => ({
         id: cat.id,
         slug: cat.slug,
         name: cat.name,
-        products: cat.products.map((link: any) => this.mapMarketProduct(link)).filter(Boolean)
+        products: cat.products.map((link) => this.mapMarketProduct(link)).filter((product): product is CatalogMarketProduct => product !== null)
       }));
     }, () => getStaticCatalogService().listMarketCategories(), "listMarketCategories");
   }

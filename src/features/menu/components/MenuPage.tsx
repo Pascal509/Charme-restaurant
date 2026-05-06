@@ -365,7 +365,7 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                   <section className="scroll-mt-32">
                     <div className="border-t border-brand-gold/10 pt-10">
                       <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                        Chef's Specials
+                        Chef&apos;s Specials
                       </p>
                       <h2 className="mt-3 font-serif text-3xl font-semibold tracking-wide text-brand-ink sm:text-4xl">
                         Recommended
@@ -515,7 +515,7 @@ function MenuItemCard({
               </h3>
               {isSpecial ? (
                 <span className="rounded-full border border-brand-gold/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-brand-gold">
-                  Chef's Special
+                  Chef&apos;s Special
                 </span>
               ) : null}
             </div>
