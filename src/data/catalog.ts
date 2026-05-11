@@ -1,17 +1,24 @@
+import { resolveMenuImage, resolveProductImage } from "@/lib/image-resolver";
+
 export type CatalogItem = {
   title: string;
+  titleZh?: string;
   description: string;
+  descriptionZh?: string;
   baseAmountMinor: number;
   stockOnHand?: number;
+  imageUrl?: string;
 };
 
 export type CatalogCategory = {
   name: string;
+  nameZh?: string;
   description?: string;
+  descriptionZh?: string;
   items: CatalogItem[];
 };
 
-export const menuCatalog: CatalogCategory[] = [
+const _rawMenuCatalog: CatalogCategory[] = [
   {
     "name": "Appetizers",
     "description": "Light starters to open the table with crisp textures and bright spice.",
@@ -474,7 +481,22 @@ export const menuCatalog: CatalogCategory[] = [
   }
 ];
 
-export const marketCatalog: CatalogCategory[] = [
+export const menuCatalog: CatalogCategory[] = _rawMenuCatalog.map((category) => ({
+  ...category,
+  nameZh: translateMenuCategoryName(category.name),
+  descriptionZh: translateMenuCategoryDescription(category.name, category.description),
+  items: category.items.map((item) => ({
+    ...item,
+    imageUrl: resolveMenuImage(item.title).src,
+    titleZh: translateMenuItemTitle(item.title),
+    descriptionZh: translateMenuItemDescription(category.name, item.title, item.description)
+  }))
+}));
+
+
+
+
+const _rawMarketCatalog: CatalogCategory[] = [
   {
     "name": "Instant Noodles",
     "items": [
@@ -830,3 +852,375 @@ export const marketCatalog: CatalogCategory[] = [
     ]
   }
 ];
+
+export const marketCatalog: CatalogCategory[] = _rawMarketCatalog.map((category) => ({
+  ...category,
+  nameZh: translateMarketCategoryName(category.name),
+  descriptionZh: translateMarketCategoryDescription(category.name),
+  products: category.items.map((item) => ({
+    ...item,
+    imageUrl: resolveProductImage(item.title).src,
+    titleZh: translateMarketProductTitle(item.title),
+    descriptionZh: translateMarketProductDescription(category.name, item.title, item.description)
+  }))
+}));
+
+function getMenuCategoryNames() {
+  return {
+    Appetizers: "前菜",
+    "Dumplings and Dim Sum": "饺子与点心",
+    Noodles: "面食",
+    "Rice Dishes": "米饭料理",
+    "Chef's Specials": "主厨招牌",
+    Soups: "汤品",
+    Seafood: "海鲜",
+    Vegetarian: "素食",
+    Desserts: "甜品",
+    Beverages: "饮品"
+  } as Record<string, string>;
+}
+
+function getMarketCategoryNames() {
+  return {
+    "Instant Noodles": "即食面",
+    "Sauces and Condiments": "酱料与调味",
+    "Rice and Grains": "米粮与谷物",
+    Snacks: "零食",
+    "Frozen Dumplings": "冷冻饺子",
+    "Tea and Drinks": "茶饮与饮品"
+  } as Record<string, string>;
+}
+
+function getMenuCategoryDescriptions() {
+  return {
+    Appetizers: "轻盈开胃的小食，口感清爽，适合先行唤醒味蕾。",
+    "Dumplings and Dim Sum": "手工包制、蒸制精巧，皮薄馅鲜，适合分享。",
+    Noodles: "面条筋道，汤底与酱汁层次分明，风味温润。",
+    "Rice Dishes": "米香与锅气平衡自然，饱满却不厚重。",
+    "Chef's Specials": "主厨招牌菜，风味浓郁，适合特别时刻。",
+    Soups: "汤底温润，香气细致，入口暖胃舒心。",
+    Seafood: "海味鲜明，火候精准，保留食材本味。",
+    Vegetarian: "植物系料理，清爽细腻，层次干净。",
+    Desserts: "甜品收尾，柔和细腻，为餐后留下余韵。",
+    Beverages: "茶饮与冷饮搭配，清爽顺口，适合餐前餐后。"
+  } as Record<string, string>;
+}
+
+function getMarketCategoryDescriptions() {
+  return {
+    "Instant Noodles": "精选即食面与拉面，备餐快速，风味饱满。",
+    "Sauces and Condiments": "从蘸酱到料理基底，一应俱全。",
+    "Rice and Grains": "米粮谷物与烹饪主食，适合日常补给。",
+    Snacks: "脆香零食与轻食点心，适合随手分享。",
+    "Frozen Dumplings": "冷冻饺子与点心，简单加热即可上桌。",
+    "Tea and Drinks": "茶饮、饮品与冲调选择，清爽搭餐。"
+  } as Record<string, string>;
+}
+
+function getTitleOverrides() {
+  return {
+  "Spring Rolls": "春卷",
+  "Scallion Pancakes": "葱油饼",
+  "Crispy Wontons": "香脆馄饨",
+  "Chili Cucumber Salad": "辣拌黄瓜",
+  "Five-Spice Peanuts": "五香花生",
+  "Salt and Pepper Tofu": "椒盐豆腐",
+  "Lotus Root Chips": "莲藕脆片",
+  "Tea-Smoked Tofu Skewers": "茶香烟熏豆腐串",
+  "Pork Dumplings": "猪肉饺",
+  "Shrimp Dumplings": "虾饺",
+  "Xiao Long Bao": "小笼包",
+  "Chicken and Chive Dumplings": "鸡肉韭菜饺",
+  "Vegetable Dumplings": "素饺",
+  "Siu Mai": "烧卖",
+  "Crab and Corn Dumplings": "蟹肉玉米饺",
+  "Shiitake Truffle Dumplings": "香菇松露饺",
+  "Beef Noodle Soup": "牛肉面汤",
+  "Dan Dan Noodles": "担担面",
+  "Stir-fried Egg Noodles": "蛋炒面",
+  "Garlic Sesame Noodles": "蒜香芝麻面",
+  "Taiwanese Braised Pork Noodles": "台式卤肉面",
+  "Seafood Chow Mein": "海鲜炒面",
+  "Lanzhou Hand-Pulled Beef Noodles": "兰州手拉牛肉面",
+  "Sesame Peanut Cold Noodles": "芝麻花生冷面",
+  "Yangzhou Fried Rice": "扬州炒饭",
+  "Chicken Fried Rice": "鸡肉炒饭",
+  "Shrimp Fried Rice": "虾仁炒饭",
+  "Pork Belly Rice Bowl": "五花肉盖饭",
+  "Mushroom Egg Fried Rice": "蘑菇蛋炒饭",
+  "Pineapple Fried Rice": "菠萝炒饭",
+  "Claypot Chicken Rice": "砂锅鸡肉饭",
+  "XO Sauce Fried Rice": "XO酱炒饭",
+  "Peking Duck": "北京烤鸭",
+  "Kung Pao Chicken": "宫保鸡丁",
+  "Sweet and Sour Pork": "糖醋里脊",
+  "Mapo Tofu": "麻婆豆腐",
+  "Hot Plate Beef": "铁板牛肉",
+  "Three Cup Chicken": "三杯鸡",
+  "Crispy Aromatic Duck": "香脆五香鸭",
+  "Claypot Braised Pork Belly": "砂锅红烧五花肉",
+  "Hot and Sour Soup": "酸辣汤",
+  "Wonton Soup": "馄饨汤",
+  "Egg Drop Soup": "蛋花汤",
+  "Seafood Tofu Soup": "海鲜豆腐汤",
+  "Taiwanese Beef Broth": "台湾牛肉汤",
+  "Winter Melon Soup": "冬瓜汤",
+  "Sweet Corn Chicken Soup": "玉米鸡汤",
+  "Spinach and Silken Tofu Soup": "菠菜嫩豆腐汤",
+  "Salt and Pepper Shrimp": "椒盐虾",
+  "Garlic Butter Prawns": "蒜香黄油大虾",
+  "Szechuan Fish Fillet": "川味鱼片",
+  "Steamed Fish with Ginger": "姜葱蒸鱼",
+  "Crispy Calamari": "香脆鱿鱼",
+  "Black Pepper Crab": "黑椒蟹",
+  "Steamed Scallops with Vermicelli": "粉丝蒸扇贝",
+  "Ginger Scallion Lobster Tails": "姜葱黄油龙虾尾",
+  "Buddha's Delight": "罗汉斋",
+  "Stir-fried Seasonal Greens": "时蔬清炒",
+  "Braised Eggplant": "红烧茄子",
+  "Garlic Broccoli": "蒜香西兰花",
+  "Mushroom Tofu Stir-fry": "蘑菇豆腐炒",
+  "Cabbage Glass Noodles": "包菜粉丝",
+  "Lotus Root and Snow Pea Stir-fry": "莲藕荷兰豆炒",
+  "Mapo Eggplant": "麻婆茄子",
+  "Mango Pudding": "芒果布丁",
+  "Sesame Balls": "芝麻球",
+  "Red Bean Pancakes": "红豆煎饼",
+  "Eight Treasure Rice": "八宝饭",
+  "Almond Jelly": "杏仁冻",
+  "Coconut Mochi": "椰香麻薯",
+  "Taro Sago": "芋头西米露",
+  "Matcha Coconut Ice Cream": "抹茶椰香冰淇淋",
+  "Jasmine Tea": "茉莉花茶",
+  "Oolong Tea": "乌龙茶",
+  "Pu-erh Tea": "普洱茶",
+  "Chrysanthemum Tea": "菊花茶",
+  "Bubble Milk Tea": "珍珠奶茶",
+  "Honey Lemon Tea": "蜂蜜柠檬茶",
+  "Osmanthus Oolong": "桂花乌龙",
+  "Plum Blossom Iced Tea": "梅花冰茶",
+  "Indomie Oriental Noodles": "印尼风味面",
+  "Nissin Ramen Classic": "日清经典拉面",
+  "Samyang Hot Chicken Ramen": "三养火鸡面",
+  "Mama Tom Yum Noodles": "MAMA冬阴功面",
+  "Paldo Jjajang Noodles": "八道炸酱面",
+  "Nongshim Shin Ramyun": "农心辛拉面",
+  "Instant Rice Vermicelli": "即食米粉",
+  "Sapporo Ichiban Miso Ramen": "札幌一番味噌拉面",
+  "Ottogi Cheese Ramen": "不倒翁芝士拉面",
+  "Lee Kum Kee Premium Soy Sauce": "李锦记特级生抽",
+  "Lee Kum Kee Oyster Sauce": "李锦记蚝油",
+  "Chili Oil with Garlic": "蒜香辣椒油",
+  "Black Vinegar": "黑醋",
+  "Hoisin Sauce": "海鲜酱",
+  "Sesame Oil": "芝麻油",
+  "Doubanjiang Chili Bean Paste": "豆瓣辣酱",
+  "Dark Soy Sauce": "老抽",
+  "Sweet Chili Sauce": "甜辣酱",
+  "Jasmine Rice 5kg": "5公斤茉莉香米",
+  "Sticky Rice": "糯米",
+  "Short Grain Sushi Rice": "寿司短粒米",
+  "Brown Rice": "糙米",
+  "Rice Vermicelli": "米粉",
+  "Rice Flour": "米粉",
+  "Mochi Rice Cake Pack": "麻薯米糕包",
+  "Black Rice": "黑米",
+  "Job's Tears (Coix Seeds)": "薏米",
+  "Pocky Sticks": "百奇饼干棒",
+  "Rice Crackers": "米饼",
+  "Shrimp Chips": "虾片",
+  "Sesame Peanut Candy": "芝麻花生糖",
+  "Dried Mango Slices": "芒果干",
+  "Honey Butter Chips": "蜂蜜黄油薯片",
+  "Seaweed Snacks": "海苔零食",
+  "Wasabi Peas": "芥末豌豆",
+  "Red Bean Dorayaki": "红豆铜锣烧",
+  "Pork and Chive Dumplings": "猪肉韭菜饺",
+  "Shrimp Har Gow": "虾饺",
+  "Vegetable Gyoza": "蔬菜煎饺",
+  "Chicken Potstickers": "鸡肉锅贴",
+  "Mushroom Dumplings": "香菇饺",
+  "Soup Dumplings": "小笼汤包",
+  "Spicy Pork Dumplings": "香辣猪肉饺",
+  "Beef and Onion Dumplings": "牛肉洋葱饺",
+  "Shrimp and Chive Dumplings": "虾仁韭菜饺",
+  "Jasmine Tea Leaves": "茉莉茶叶",
+  "Oolong Tea Pack": "乌龙茶包",
+  "Pu-erh Tea Bricks": "普洱茶砖",
+  "Brown Sugar Boba Kit": "黑糖波波套装",
+  "Lychee Juice": "荔枝汁",
+  "Winter Melon Tea": "冬瓜茶",
+  "Green Tea Latte Mix": "抹茶拿铁粉",
+  "Roasted Barley Tea": "烘焙大麦茶",
+  "Sparkling Lychee Soda": "荔枝气泡苏打"
+  } as Record<string, string>;
+}
+
+function getBrandReplacements() {
+  return [
+    [/Lee Kum Kee/gi, "李锦记"],
+    [/Nongshim/gi, "农心"],
+    [/Nissin/gi, "日清"],
+    [/Samyang/gi, "三养"],
+    [/Paldo/gi, "八道"],
+    [/Ottogi/gi, "不倒翁"],
+    [/Sapporo Ichiban/gi, "札幌一番"],
+    [/Indomie/gi, "印多美"],
+    [/Pocky/gi, "百奇"],
+    [/Kewpie/gi, "丘比"],
+    [/Mama/gi, "MAMA"],
+    [/Job's Tears/gi, "薏米"]
+  ] as Array<[RegExp, string]>;
+}
+
+function getGenericReplacements() {
+  return [
+    [/\bPremium\b/gi, "特级"],
+    [/\bClassic\b/gi, "经典"],
+    [/\bOriental\b/gi, "东方风味"],
+    [/\bHot Chicken\b/gi, "火鸡"],
+    [/\bHot and Sour\b/gi, "酸辣"],
+    [/\bSweet and Sour\b/gi, "糖醋"],
+    [/\bBlack Pepper\b/gi, "黑椒"],
+    [/\bFive-Spice\b/gi, "五香"],
+    [/\bFive Spice\b/gi, "五香"],
+    [/\bScallion\b/gi, "葱香"],
+    [/\bSpring\b/gi, "春"],
+    [/\bCrispy\b/gi, "香脆"],
+    [/\bCrunchy\b/gi, "酥脆"],
+    [/\bTender\b/gi, "嫩"],
+    [/\bBraised\b/gi, "红烧"],
+    [/\bSteamed\b/gi, "蒸"],
+    [/\bStir[- ]fried\b/gi, "炒"],
+    [/\bFried\b/gi, "炒"],
+    [/\bRoasted\b/gi, "烘焙"],
+    [/\bGrilled\b/gi, "炙烤"],
+    [/\bGarlic\b/gi, "蒜香"],
+    [/\bButter\b/gi, "黄油"],
+    [/\bSesame\b/gi, "芝麻"],
+    [/\bSoy\b/gi, "酱油"],
+    [/\bOyster\b/gi, "蚝"],
+    [/\bChicken\b/gi, "鸡肉"],
+    [/\bPork\b/gi, "猪肉"],
+    [/\bBeef\b/gi, "牛肉"],
+    [/\bShrimp\b/gi, "虾仁"],
+    [/\bPrawn\b/gi, "大虾"],
+    [/\bFish\b/gi, "鱼"],
+    [/\bCrab\b/gi, "蟹"],
+    [/\bDuck\b/gi, "鸭"],
+    [/\bLobster\b/gi, "龙虾"],
+    [/\bScallops?\b/gi, "扇贝"],
+    [/\bCalamari\b/gi, "鱿鱼"],
+    [/\bTofu\b/gi, "豆腐"],
+    [/\bEggplant\b/gi, "茄子"],
+    [/\bBroccoli\b/gi, "西兰花"],
+    [/\bMushroom\b/gi, "蘑菇"],
+    [/\bVegetable\b/gi, "蔬菜"],
+    [/\bGreens\b/gi, "青菜"],
+    [/\bDumplings?\b/gi, "饺子"],
+    [/\bWontons?\b/gi, "馄饨"],
+    [/\bPancakes?\b/gi, "煎饼"],
+    [/\bNoodles?\b/gi, "面"],
+    [/\bRamen\b/gi, "拉面"],
+    [/\bRice\b/gi, "米饭"],
+    [/\bSoup\b/gi, "汤"],
+    [/\bTea\b/gi, "茶"],
+    [/\bDrink\b/gi, "饮品"],
+    [/\bJuice\b/gi, "果汁"],
+    [/\bSoda\b/gi, "苏打"],
+    [/\bWater\b/gi, "水"],
+    [/\bMilk\b/gi, "奶"],
+    [/\bCandy\b/gi, "糖果"],
+    [/\bChips\b/gi, "薯片"],
+    [/\bCrackers?\b/gi, "脆饼"],
+    [/\bCookies?\b/gi, "饼干"],
+    [/\bWafers?\b/gi, "威化"],
+    [/\bSnacks?\b/gi, "零食"],
+    [/\bSauce\b/gi, "酱"],
+    [/\bPaste\b/gi, "酱"],
+    [/\bOil\b/gi, "油"],
+    [/\bPowder\b/gi, "粉"],
+    [/\bPack\b/gi, "套装"],
+    [/\bKit\b/gi, "套装"],
+    [/\bBowl\b/gi, "碗装"],
+    [/\bMix\b/gi, "混合"],
+    [/\bHot\b/gi, "香辣"],
+    [/\bSpicy\b/gi, "辣味"],
+    [/\bSweet\b/gi, "甜味"],
+    [/\bSour\b/gi, "酸味"],
+    [/\bCreamy\b/gi, "奶香"],
+    [/\bFresh\b/gi, "鲜"]
+  ] as Array<[RegExp, string]>;
+}
+
+function translateMenuCategoryName(name: string) {
+  return getMenuCategoryNames()[name] ?? name;
+}
+
+function translateMarketCategoryName(name: string) {
+  return getMarketCategoryNames()[name] ?? name;
+}
+
+function translateMenuCategoryDescription(name: string, description?: string) {
+  return getMenuCategoryDescriptions()[name] ?? description;
+}
+
+function translateMarketCategoryDescription(name: string) {
+  return getMarketCategoryDescriptions()[name] ?? undefined;
+}
+
+function translateMenuItemTitle(title: string) {
+  return translateTitle(title, getTitleOverrides());
+}
+
+function translateMarketProductTitle(title: string) {
+  return translateTitle(title, getTitleOverrides());
+}
+
+function translateMenuItemDescription(categoryName: string, title: string, description: string) {
+  return translateDescription(categoryName, title, description, true);
+}
+
+function translateMarketProductDescription(categoryName: string, title: string, description: string) {
+  return translateDescription(categoryName, title, description, false);
+}
+
+function translateTitle(title: string, overrides: Record<string, string>) {
+  const exact = overrides[title];
+  if (exact) return exact;
+
+  let translated = title;
+  for (const [pattern, replacement] of getBrandReplacements()) {
+    translated = translated.replace(pattern, replacement);
+  }
+  for (const [pattern, replacement] of getGenericReplacements()) {
+    translated = translated.replace(pattern, replacement);
+  }
+
+  return translated
+    .replace(/\s+/g, " ")
+    .replace(/\s+([，。！？、])/g, "$1")
+    .trim();
+}
+
+function translateDescription(categoryName: string, title: string, description: string, isMenu: boolean) {
+  const exact = isMenu
+    ? getMenuDescriptionOverrides()[title]
+    : getMarketDescriptionOverrides()[title];
+  if (exact) return exact;
+
+  const categoryDescription = isMenu
+    ? getMenuCategoryDescriptions()[categoryName]
+    : getMarketCategoryDescriptions()[categoryName];
+
+  return categoryDescription ?? description;
+}
+
+function getMenuDescriptionOverrides() {
+  return {} as Record<string, string>;
+}
+
+function getMarketDescriptionOverrides() {
+  return {} as Record<string, string>;
+}
+

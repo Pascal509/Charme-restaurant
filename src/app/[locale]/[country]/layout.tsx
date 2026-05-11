@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import SiteShell from "@/components/layout/SiteShell";
+import LocalePreferenceSync from "@/components/i18n/LocalePreferenceSync";
 
 export const metadata: Metadata = {
   title: "Charme",
@@ -15,6 +16,7 @@ export default function LocaleLayout({
 }) {
   return (
     <SiteShell locale={params.locale} country={params.country}>
+      <LocalePreferenceSync locale={params.locale} country={params.country} />
       {children}
     </SiteShell>
   );

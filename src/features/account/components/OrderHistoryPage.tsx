@@ -7,6 +7,7 @@ import Container from "@/components/layout/Container";
 import SectionHero from "@/components/sections/SectionHero";
 import { images } from "@/config/images";
 import { useCartStore } from "@/store/useCartStore";
+import { getDictionary, t } from "@/lib/i18n";
 
 type OrderItem = {
   id: string;
@@ -50,9 +51,9 @@ export default function OrderHistoryPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const { incrementBy } = useCartStore();
+  const dict = getDictionary(locale);
 
-  useEffect(() => {
-    const id = resolveGuestId();
+  useEffect(() => {    const id = resolveGuestId();
     if (id) setGuestId(id);
   }, []);
 
@@ -62,7 +63,7 @@ export default function OrderHistoryPage({
       const response = await fetch("/api/orders");
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load orders");
+        throw new Error(error.error || t(dict, "account.ordersError"));
       }
       return response.json();
     },
@@ -79,7 +80,7 @@ export default function OrderHistoryPage({
     setReorderingId(order.id);
 
     if (!guestId) {
-      setErrorMessage("Unable to resolve guest cart.");
+      setErrorMessage(t(dict, "account.guestCartUnavailable"));
       setReorderingId(null);
       return;
     }
@@ -110,7 +111,7 @@ export default function OrderHistoryPage({
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
-          throw new Error(error.error || "Failed to reorder");
+          throw new Error(error.error || t(dict, "account.reorderError"));
         }
       }
 
@@ -118,7 +119,7 @@ export default function OrderHistoryPage({
       incrementBy(count);
       window.location.href = `${basePath}/cart`;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to reorder");
+      setErrorMessage(error instanceof Error ? error.message : t(dict, "account.reorderError"));
     } finally {
       setReorderingId(null);
     }
@@ -128,9 +129,9 @@ export default function OrderHistoryPage({
     <main className="bg-brand-rice page-transition">
       <Container className="py-10">
         <SectionHero
-          eyebrow="Account"
-          title="Order history"
-          subtitle="Review past orders, track current deliveries, and reorder your favorites."
+          eyebrow={t(dict, "account.eyebrow")}
+          title={t(dict, "account.orderHistory")}
+          subtitle={t(dict, "account.subtitle")}
           imageUrl={images.dining}
         />
       </Container>
@@ -147,11 +148,11 @@ export default function OrderHistoryPage({
             <OrderSkeleton />
           ) : ordersQuery.isError ? (
             <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
-              Unable to load orders. Please try again.
+              {t(dict, "account.ordersError")}
             </div>
           ) : orders.length === 0 ? (
             <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
-              No orders yet. Browse the menu to get started.
+              {t(dict, "account.noOrders")}
             </div>
           ) : (
             <div className="space-y-6">
@@ -159,17 +160,17 @@ export default function OrderHistoryPage({
                 <div key={order.id} className="rounded-xl border border-brand-ink/10 bg-white p-5 shadow-soft">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/60">Order</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/60">{t(dict, "orders.orderPrefix")}</p>
                       <div className="mt-2 flex items-center gap-3">
                         <h2 className="text-lg font-semibold text-brand-ink">{order.id}</h2>
-                        <StatusBadge status={order.status} />
+                        <StatusBadge status={order.status} dict={dict} />
                       </div>
                       <p className="mt-1 text-xs text-brand-ink/60">
-                        {formatDate(order.createdAt)} · {order.orderType}
+                        {formatDate(order.createdAt)} · {order.orderType === "DELIVERY" ? t(dict, "orders.deliveryLabel") : t(dict, "orders.pickupLabel")}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-brand-ink/60">Total</p>
+                      <p className="text-xs text-brand-ink/60">{t(dict, "orders.total")}</p>
                       <p className="text-lg font-semibold text-brand-ink">
                         {formatCurrency(order.totalAmountMinor, order.displayCurrency)}
                       </p>
@@ -177,7 +178,7 @@ export default function OrderHistoryPage({
                         href={`${basePath}/orders/${order.id}`}
                         className="mt-2 inline-flex text-xs font-semibold text-brand-ink"
                       >
-                        Track order
+                        {t(dict, "account.track")}
                       </Link>
                     </div>
                   </div>
@@ -187,9 +188,9 @@ export default function OrderHistoryPage({
                       <div key={item.id} className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-brand-ink">
-                            {item.menuItem?.title || item.productVariant?.title || "Item"}
+                            {item.menuItem?.title || item.productVariant?.title || t(dict, "orders.itemFallback")}
                           </p>
-                          <p className="text-xs text-brand-ink/60">Qty {item.quantity}</p>
+                          <p className="text-xs text-brand-ink/60">{t(dict, "orders.qty")} {item.quantity}</p>
                         </div>
                         <span className="font-semibold text-brand-ink">
                           {formatCurrency(item.unitAmountMinor * item.quantity, item.currency)}
@@ -200,14 +201,14 @@ export default function OrderHistoryPage({
 
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-brand-ink/10 pt-4">
                     <div className="text-xs text-brand-ink/60">
-                      Payment {order.paymentStatus.replace(/_/g, " ")}
+                      {t(dict, "orders.paymentPrefix")} {order.paymentStatus === "PAID" ? t(dict, "orders.statusPaid") : order.paymentStatus === "FAILED" ? t(dict, "orders.statusFailed") : order.paymentStatus === "CANCELLED" ? t(dict, "orders.statusCancelled") : order.paymentStatus.replace(/_/g, " ")}
                     </div>
                     <button
                       onClick={() => handleReorder(order)}
                       disabled={reorderingId === order.id}
                       className="rounded-md bg-brand-cinnabar px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-cinnabar/60"
                     >
-                      {reorderingId === order.id ? "Reordering..." : "Reorder"}
+                      {reorderingId === order.id ? t(dict, "account.reordering") : t(dict, "account.reorder")}
                     </button>
                   </div>
                 </div>
@@ -220,8 +221,15 @@ export default function OrderHistoryPage({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const normalized = status.replace(/_/g, " ");
+function StatusBadge({ status, dict }: { status: string; dict: ReturnType<typeof getDictionary> }) {
+  const label =
+    status === "DELIVERED"
+      ? t(dict, "orders.delivered")
+      : status === "CANCELLED"
+      ? t(dict, "orders.statusCancelled")
+      : status === "FAILED"
+      ? t(dict, "orders.statusFailed")
+      : status.replace(/_/g, " ");
   const style =
     status === "DELIVERED"
       ? "bg-brand-jade/10 text-brand-jade"
@@ -229,7 +237,7 @@ function StatusBadge({ status }: { status: string }) {
       ? "bg-brand-cinnabar/10 text-brand-cinnabar"
       : "bg-brand-ink/10 text-brand-ink/70";
 
-  return <span className={`rounded-full px-2 py-1 text-xs font-semibold ${style}`}>{normalized}</span>;
+  return <span className={`rounded-full px-2 py-1 text-xs font-semibold ${style}`}>{label}</span>;
 }
 
 function OrderSkeleton() {

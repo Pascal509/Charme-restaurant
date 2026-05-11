@@ -7,6 +7,9 @@ import Container from "@/components/layout/Container";
 import ImageWrapper from "@/components/ui/ImageWrapper";
 import { useCartStore } from "@/store/useCartStore";
 import type { MenuItem, SelectedMap } from "@/features/menu/types";
+import LocaleSwitcher from "@/components/navigation/LocaleSwitcher";
+import { getDictionary, t, normalizeLocale } from "@/lib/i18n";
+import { resolveMenuImage } from "@/lib/image-resolver";
 
 const ModifierDrawer = dynamic(() => import("@/features/menu/components/ModifierDrawer"), {
   ssr: false
@@ -28,6 +31,7 @@ type MenuCategory = {
 
 type MenuPageProps = {
   categories: MenuCategory[];
+  locale?: string;
 };
 
 type MenuImage = {
@@ -35,7 +39,8 @@ type MenuImage = {
   position: "object-top" | "object-center" | "object-bottom";
 };
 
-export default function MenuPage({ categories: initialCategories }: MenuPageProps) {
+export default function MenuPage({ categories: initialCategories, locale }: MenuPageProps) {
+  const dict = getDictionary(locale);
   const ITEMS_PER_PAGE = 6;
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -91,7 +96,7 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to add to cart");
+        throw new Error(error.error || t(dict, "messages.failedAddCart"));
       }
 
       return response.json();
@@ -249,16 +254,19 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
     <main className="scroll-smooth bg-brand-obsidian text-brand-ink lux-gradient page-transition">
       <Container className="py-16 lg:py-20">
         <section className="rounded-3xl border border-brand-gold/10 bg-black/40 px-6 py-10 shadow-crisp sm:px-10 sm:py-12">
-          <p className="seal-badge">Menu</p>
+          <div className="flex items-center justify-between">
+            <p className="seal-badge">{t(dict, "menu.title")}</p>
+            <LocaleSwitcher currentLocale={locale ?? "en"} variant="inline" />
+          </div>
+
           <h1 className="mt-4 font-display text-3xl text-brand-ink sm:text-4xl lg:text-5xl">
-            Curated dishes with modern indulgence
+            {t(dict, "menu.heroTitle")}
           </h1>
           <p className="mt-4 max-w-3xl text-sm text-brand-ink/70 sm:text-base">
-            Select from our seasonal categories and build the perfect order. Fresh ingredients,
-            precise prep, and thoughtful pairings.
+            {t(dict, "menu.heroSubtitle")}
           </p>
           <div className="mt-6 flex items-center text-sm font-semibold text-brand-ink">
-            Cart
+            {t(dict, "nav.cart")}
             {cartBadge}
           </div>
         </section>
@@ -268,14 +276,14 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
         <Container className="py-10 lg:py-12">
           {categories.length === 0 ? (
             <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-sm text-brand-ink/70 shadow-soft">
-              No menu items available right now.
+              {t(dict, "menu.emptyState")}
             </div>
           ) : (
             <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
               <aside className="hidden lg:block">
                 <div className="sticky top-24 space-y-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                    Categories
+                    {t(dict, "menu.categories")}
                   </p>
                   <nav className="flex flex-col gap-2">
                     {categories.map((category) => (
@@ -300,25 +308,25 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                   <div className="grid gap-4 rounded-2xl bg-white/5 p-6 sm:grid-cols-[1fr_200px_200px]">
                     <div className="space-y-2">
                       <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                        Search
+                        {t(dict, "menu.searchPlaceholder")}
                       </label>
                       <input
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="Search dishes, ingredients"
+                        placeholder={t(dict, "menu.searchPlaceholder")}
                         className="w-full rounded-xl border border-brand-gold/5 bg-black/30 px-3 py-2 text-sm text-brand-ink placeholder:text-brand-ink/40"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                        Category
+                        {t(dict, "menu.categories")}
                       </label>
                       <select
                         value={selectedCategoryId}
                         onChange={(event) => setSelectedCategoryId(event.target.value as string)}
                         className="w-full rounded-xl border border-brand-gold/5 bg-black/30 px-3 py-2 text-sm text-brand-ink"
                       >
-                        <option value="all">All</option>
+                        <option value="all">{t(dict, "menu.allOption")}</option>
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>
                             {category.name}
@@ -328,17 +336,17 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                        Price
+                        {t(dict, "menu.price")}
                       </label>
                       <select
                         value={priceFilter}
                         onChange={(event) => setPriceFilter(event.target.value)}
                         className="w-full rounded-xl border border-brand-gold/5 bg-black/30 px-3 py-2 text-sm text-brand-ink"
                       >
-                        <option value="all">All</option>
-                        <option value="low">Under 5,000</option>
-                        <option value="mid">5,000 - 15,000</option>
-                        <option value="high">15,000+</option>
+                        <option value="all">{t(dict, "menu.priceAll")}</option>
+                        <option value="low">{t(dict, "menu.priceLow")}</option>
+                        <option value="mid">{t(dict, "menu.priceMid")}</option>
+                        <option value="high">{t(dict, "menu.priceHigh")}</option>
                       </select>
                     </div>
                   </div>
@@ -357,7 +365,7 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
 
                 {filteredCategories.length === 0 ? (
                   <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-sm text-brand-ink/70 shadow-soft">
-                    No items match your search. Try adjusting filters.
+                    {t(dict, "menu.noResults")}
                   </div>
                 ) : null}
 
@@ -365,13 +373,13 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                   <section className="scroll-mt-32">
                     <div className="border-t border-brand-gold/10 pt-10">
                       <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                        Chef&apos;s Specials
+                        {t(dict, "menu.chefsSpecial")}
                       </p>
                       <h2 className="mt-3 font-serif text-3xl font-semibold tracking-wide text-brand-ink sm:text-4xl">
-                        Recommended
+                        {t(dict, "menu.recommended")}
                       </h2>
                       <p className="mt-2 text-sm text-brand-ink/60">
-                        A curated selection of signature dishes and guest favorites.
+                        {t(dict, "menu.featuredSubtitle")}
                       </p>
                     </div>
                     <div className="mt-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -382,6 +390,8 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                           onAdd={handleAddToCart}
                           onOpen={() => openDetail(item)}
                           onFocus={setFocusedItem}
+                          locale={locale}
+                          dict={dict}
                         />
                       ))}
                     </div>
@@ -416,6 +426,8 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                                 onAdd={handleAddToCart}
                                 onOpen={() => openDetail(item)}
                                 onFocus={setFocusedItem}
+                                locale={locale}
+                                dict={dict}
                               />
                             ))}
                           </div>
@@ -430,6 +442,7 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
                                   [category.id]: nextPage
                                 }))
                               }
+                              dict={dict}
                             />
                           ) : null}
                         </>
@@ -450,6 +463,7 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
           onSelect={setSelectedOptions}
           onClose={() => setSelectedItem(null)}
           onConfirm={handleConfirmModifiers}
+          locale={locale}
         />
       ) : null}
 
@@ -460,10 +474,11 @@ export default function MenuPage({ categories: initialCategories }: MenuPageProp
           onQuantityChange={setDetailQty}
           onClose={() => setDetailItem(null)}
           onConfirm={handleConfirmDetail}
+          locale={locale}
         />
       ) : null}
 
-      <MobileStickyCTA item={focusedItem} onAdd={handleAddToCart} onOpen={openDetail} />
+      <MobileStickyCTA item={focusedItem} onAdd={handleAddToCart} onOpen={openDetail} dict={dict} />
     </main>
   );
 }
@@ -472,13 +487,18 @@ function MenuItemCard({
   item,
   onAdd,
   onOpen,
-  onFocus
+  onFocus,
+  locale,
+  dict
 }: {
   item: MenuItem;
   onAdd: (item: MenuItem, sourceEl?: HTMLDivElement | null, imageUrl?: string) => void;
   onOpen: () => void;
   onFocus: (item: MenuItem) => void;
+  locale?: string;
+  dict: ReturnType<typeof getDictionary>;
 }) {
+  const localeNormalized = normalizeLocale(locale);
   const imageRef = useRef<HTMLDivElement | null>(null);
   const blurData =
     "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB2aWV3Qm94PSIwIDAgNCA0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMxMTExMTEiLz48L3N2Zz4=";
@@ -511,11 +531,11 @@ function MenuItemCard({
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-serif text-xl font-semibold tracking-wide text-brand-ink sm:text-2xl">
-                {item.name}
+                {localeNormalized === "zh-CN" ? (item.nameZh ?? item.name) : item.name}
               </h3>
               {isSpecial ? (
                 <span className="rounded-full border border-brand-gold/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-brand-gold">
-                  Chef&apos;s Special
+                  {t(dict, "menu.chefsSpecial")}
                 </span>
               ) : null}
             </div>
@@ -529,20 +549,20 @@ function MenuItemCard({
             {formatCurrency(item.priceMinor, item.currency)}
           </span>
         </div>
-        <p className="line-clamp-2 text-sm text-brand-ink/65">{getMenuDescription(item)}</p>
+        <p className="line-clamp-2 text-sm text-brand-ink/65">{localeNormalized === "zh-CN" ? (item.descriptionZh ?? getMenuDescription(item, localeNormalized)) : getMenuDescription(item, localeNormalized)}</p>
         <div className="mt-auto flex items-center justify-between gap-3 pt-2">
           <button
             className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/70 transition hover:text-brand-gold"
             onClick={onOpen}
           >
-            Details
+            {t(dict, "menu.details")}
           </button>
           <button
             className="rounded-full border border-brand-gold/30 px-4 py-2 text-xs font-semibold text-brand-gold transition hover:bg-brand-gold/10 disabled:cursor-not-allowed disabled:border-brand-ink/20 disabled:text-brand-ink/40"
             onClick={() => onAdd(item, imageRef.current, image.src)}
             disabled={!item.isAvailable}
           >
-            Add to Cart
+            {t(dict, "menu.addToCart")}
           </button>
         </div>
       </div>
@@ -581,11 +601,13 @@ function MobileCategoryTabs({
 function MobileStickyCTA({
   item,
   onAdd,
-  onOpen
+  onOpen,
+  dict
 }: {
   item: MenuItem | null;
   onAdd: (item: MenuItem) => void;
   onOpen: (item: MenuItem) => void;
+  dict: ReturnType<typeof getDictionary>;
 }) {
   if (!item) return null;
 
@@ -593,7 +615,7 @@ function MobileStickyCTA({
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-gold/10 bg-brand-obsidian/90 p-4 shadow-crisp sm:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
         <div>
-          <p className="text-xs text-brand-ink/60">Selected</p>
+          <p className="text-xs text-brand-ink/60">{t(dict, "menu.selected")}</p>
           <p className="text-base font-semibold text-brand-ink">{item.name}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -601,14 +623,14 @@ function MobileStickyCTA({
             onClick={() => onOpen(item)}
             className="rounded-full border border-brand-gold/30 px-3 py-2 text-xs font-semibold text-brand-gold"
           >
-            Details
+            {t(dict, "menu.details")}
           </button>
           <button
             onClick={() => onAdd(item)}
             className="rounded-full bg-brand-gold px-3 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
             disabled={!item.isAvailable}
           >
-            Add
+            {t(dict, "menu.addToCart")}
           </button>
         </div>
       </div>
@@ -628,19 +650,21 @@ function PaginationBar({
   currentPage,
   totalPages,
   onPageChange,
-  className
+  className,
+  dict
 }: {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
   className?: string;
+  dict: ReturnType<typeof getDictionary>;
 }) {
   const pageItems = buildPaginationItems(currentPage, totalPages);
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-4 ${className ?? ""}`}>
       <p className="text-xs uppercase tracking-[0.25em] text-brand-ink/50">
-        Showing page {currentPage} of {totalPages}
+        {t(dict, "menu.showingPage").replace("{current}", String(currentPage)).replace("{total}", String(totalPages))}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -649,7 +673,7 @@ function PaginationBar({
           disabled={currentPage === 1}
           className="rounded-full border border-brand-gold/20 px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:border-brand-gold/40 hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Prev
+          {t(dict, "common.prev")}
         </button>
         <button
           type="button"
@@ -657,7 +681,7 @@ function PaginationBar({
           disabled={currentPage === totalPages}
           className="rounded-full border border-brand-gold/20 px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:border-brand-gold/40 hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Next
+          {t(dict, "common.next")}
         </button>
         {pageItems.map((pageItem, index) =>
           pageItem === "ellipsis" ? (
@@ -706,71 +730,64 @@ function buildPaginationItems(currentPage: number, totalPages: number) {
 }
 
 function getMenuImage(title: string): MenuImage {
-  const t = title.toLowerCase();
-  const needsTopCrop = t.includes("soup") || t.includes("noodle") || t.includes("bowl");
-
-  if (t.includes("dumpling")) {
-    return {
-      src: "/images/Fresh-homemade-Chinese-boiled-dumplings.jpg",
-      position: needsTopCrop ? "object-top" : "object-center"
-    };
-  }
-  if (t.includes("noodle")) {
-    return { src: "/images/noodles.jpg", position: "object-top" };
-  }
-  if (t.includes("tea") || t.includes("drink")) {
-    return { src: "/images/Charme-bubble-Tea-shop.jpg", position: "object-bottom" };
-  }
-  if (t.includes("rice")) {
-    return { src: "/images/beef-fried-rice..jpg", position: needsTopCrop ? "object-top" : "object-center" };
-  }
-  if (t.includes("duck")) {
-    return { src: "/images/best-of-Chinese-cuisine.jpg", position: needsTopCrop ? "object-top" : "object-center" };
-  }
-  if (t.includes("dim")) {
-    return {
-      src: "/images/Mai-Steamed-Chicken-and-shrimp-dumpling.jpg",
-      position: needsTopCrop ? "object-top" : "object-center"
-    };
-  }
-
-  return { src: "/images/Your-favorite-meals.jpg", position: needsTopCrop ? "object-top" : "object-center" };
+  return resolveMenuImage(title);
 }
 
-function getMenuDescription(item: MenuItem) {
+function getMenuDescription(item: MenuItem, localeNormalized?: string) {
   if (item.description && item.description.trim()) return item.description;
 
   const name = item.name.toLowerCase();
+  const zh = localeNormalized === "zh-CN";
 
   if (name.includes("dumpling")) {
-    return "Hand-folded dumplings filled with seasoned pork and napa cabbage, delicately steamed.";
+    return zh
+      ? "手工包制的饺子，内馅鲜香，蒸制后口感细腻。"
+      : "Hand-folded dumplings filled with seasoned pork and napa cabbage, delicately steamed.";
   }
   if (name.includes("noodle")) {
-    return "Fresh wheat noodles tossed in a rich, savory sauce with crisp vegetables.";
+    return zh
+      ? "新鲜小麦面拌上浓郁咸香的酱汁，搭配爽脆蔬菜。"
+      : "Fresh wheat noodles tossed in a rich, savory sauce with crisp vegetables.";
   }
   if (name.includes("fried") && name.includes("rice")) {
-    return "Fragrant wok-fried rice with eggs, scallions, and traditional seasoning.";
+    return zh
+      ? "锅气十足的炒饭，配鸡蛋、葱花和传统调味。"
+      : "Fragrant wok-fried rice with eggs, scallions, and traditional seasoning.";
   }
   if (name.includes("rice")) {
-    return "Fragrant wok-fried rice with eggs, scallions, and traditional seasoning.";
+    return zh
+      ? "锅气十足的炒饭，配鸡蛋、葱花和传统调味。"
+      : "Fragrant wok-fried rice with eggs, scallions, and traditional seasoning.";
   }
   if (name.includes("duck")) {
-    return "Crisp-skinned duck with rich, savory notes and a refined finishing glaze.";
+    return zh
+      ? "鸭皮酥脆，风味醇厚，收尾酱汁精致。"
+      : "Crisp-skinned duck with rich, savory notes and a refined finishing glaze.";
   }
   if (name.includes("shrimp") || name.includes("prawn")) {
-    return "Succulent shrimp in a light, fragrant sauce with gentle spice and citrus lift.";
+    return zh
+      ? "鲜嫩虾肉裹着清雅酱汁，带有柔和辛香和柑橘清意。"
+      : "Succulent shrimp in a light, fragrant sauce with gentle spice and citrus lift.";
   }
   if (name.includes("chicken")) {
-    return "Tender chicken finished with wok aromatics, balanced spice, and a silky glaze.";
+    return zh
+      ? "鸡肉嫩滑，搭配锅香与平衡香辣，收尾如丝般顺滑。"
+      : "Tender chicken finished with wok aromatics, balanced spice, and a silky glaze.";
   }
   if (name.includes("beef")) {
-    return "Slow-cooked beef with deep umami, finished with house spices and herbs.";
+    return zh
+      ? "慢火烹制的牛肉，带有深层鲜味，并以香料和香草收尾。"
+      : "Slow-cooked beef with deep umami, finished with house spices and herbs.";
   }
   if (name.includes("tea") || name.includes("drink") || name.includes("bubble")) {
-    return "Carefully brewed traditional tea with smooth, aromatic notes.";
+    return zh
+      ? "精心冲泡的传统茶饮，口感顺滑，香气悠长。"
+      : "Carefully brewed traditional tea with smooth, aromatic notes.";
   }
 
-  return "A chef-crafted signature, layered with aroma, texture, and elegant flavor.";
+  return zh
+    ? "主厨精心打造的招牌菜，层次丰富，香气、口感与风味都恰到好处。"
+    : "A chef-crafted signature, layered with aroma, texture, and elegant flavor.";
 }
 
 function isChefsSpecial(item: MenuItem) {

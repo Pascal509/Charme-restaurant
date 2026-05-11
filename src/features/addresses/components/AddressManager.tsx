@@ -6,12 +6,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AddressForm from "@/features/addresses/components/AddressForm";
 import type { AddressInput, AddressRecord } from "@/features/addresses/types";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
+import { t, type DictionaryType } from "@/lib/i18n";
 
 const GUEST_STORAGE_KEY = "guestAddresses";
 
-export default function AddressManager() {
+type AddressManagerProps = {
+  dict: DictionaryType;
+};
+
+export default function AddressManager({ dict }: AddressManagerProps) {
   const { status } = useSession();
-  const { userId, loading: identityLoading, error: identityError } = useUserIdentity();
+  const { userId, loading: identityLoading, error: identityError } = useUserIdentity(t(dict, "addressManager.identityError"));
   const queryClient = useQueryClient();
   const [guestAddresses, setGuestAddresses] = useState<AddressRecord[]>([]);
   const [editing, setEditing] = useState<AddressRecord | null>(null);
@@ -26,8 +31,7 @@ export default function AddressManager() {
     queryFn: async () => {
       const response = await fetch(`/api/addresses?userId=${userId}`);
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load addresses");
+        throw new Error(t(dict, "addressManager.loadError"));
       }
       return response.json();
     }
@@ -56,7 +60,7 @@ export default function AddressManager() {
 
     if (isAuthenticated) {
       if (!userId) {
-        setActionError("User identity not ready");
+        setActionError(t(dict, "addressManager.identityNotReady"));
         return;
       }
 
@@ -69,8 +73,7 @@ export default function AddressManager() {
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          setActionError(error.error || "Failed to update address");
+          setActionError(t(dict, "addressManager.updateError"));
           return;
         }
       } else {
@@ -81,8 +84,7 @@ export default function AddressManager() {
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          setActionError(error.error || "Failed to save address");
+          setActionError(t(dict, "addressManager.saveError"));
           return;
         }
       }
@@ -107,8 +109,7 @@ export default function AddressManager() {
         method: "DELETE"
       });
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        setActionError(error.error || "Failed to delete address");
+        setActionError(t(dict, "addressManager.deleteError"));
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
@@ -130,8 +131,7 @@ export default function AddressManager() {
         body: JSON.stringify({ userId })
       });
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        setActionError(error.error || "Failed to set default");
+        setActionError(t(dict, "addressManager.defaultError"));
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["addresses", userId] });
@@ -150,7 +150,7 @@ export default function AddressManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-brand-ink">Saved addresses</h3>
+        <h3 className="text-sm font-semibold text-brand-ink">{t(dict, "account.savedAddresses")}</h3>
         <button
           onClick={() => {
             setEditing(null);
@@ -158,7 +158,7 @@ export default function AddressManager() {
           }}
           className="text-xs font-semibold text-brand-ink"
         >
-          {showForm ? "Close" : "Add new"}
+          {showForm ? t(dict, "common.close") : t(dict, "checkout.addNew")}
         </button>
       </div>
 
@@ -182,7 +182,7 @@ export default function AddressManager() {
         </div>
       ) : addresses.length === 0 ? (
         <div className="rounded-md border border-brand-ink/10 bg-brand-ink/5 px-3 py-3 text-sm text-brand-ink/60">
-          No saved addresses yet.
+          {t(dict, "addressManager.empty")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -206,15 +206,15 @@ export default function AddressManager() {
                   </p>
                 </div>
                 {address.isDefault ? (
-                  <span className="rounded-full bg-brand-jade/10 px-2 py-1 text-[10px] font-semibold text-brand-jade">
-                    Default
+                    <span className="rounded-full bg-brand-jade/10 px-2 py-1 text-[10px] font-semibold text-brand-jade">
+                    {t(dict, "addressManager.defaultLabel")}
                   </span>
                 ) : null}
               </div>
 
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-brand-ink/70">
-                <button onClick={() => handleSetDefault(address)} className="font-semibold">
-                  Set default
+                  <button onClick={() => handleSetDefault(address)} className="font-semibold">
+                  {t(dict, "addressManager.setDefault")}
                 </button>
                 <button
                   onClick={() => {
@@ -223,10 +223,10 @@ export default function AddressManager() {
                   }}
                   className="font-semibold"
                 >
-                  Edit
+                  {t(dict, "addressManager.edit")}
                 </button>
                 <button onClick={() => handleDelete(address)} className="font-semibold text-brand-cinnabar">
-                  Delete
+                  {t(dict, "addressManager.delete")}
                 </button>
               </div>
             </div>
@@ -244,6 +244,7 @@ export default function AddressManager() {
               setShowForm(false);
             }}
             requireGeo={isAuthenticated}
+            dict={dict}
           />
         </div>
       ) : null}

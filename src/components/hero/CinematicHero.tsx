@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Container from "@/components/layout/Container";
 import ImageWrapper from "@/components/ui/ImageWrapper";
+import { getDictionary, t } from "@/lib/i18n";
 
 type CinematicHeroProps = {
   locale: string;
@@ -14,6 +15,7 @@ const heroBlur =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB2aWV3Qm94PSIwIDAgNCA0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMxMTExMTEiLz48L3N2Zz4=";
 
 export default function CinematicHero({ locale, country }: CinematicHeroProps) {
+  const dict = getDictionary(locale);
   const [offset, setOffset] = useState(0);
   const heroImages = useMemo(
     () => [
@@ -112,30 +114,26 @@ export default function CinematicHero({ locale, country }: CinematicHeroProps) {
         <div className="relative flex min-h-[100svh] items-center py-20">
           <div className="glass-card w-full max-w-2xl rounded-3xl px-8 py-12 sm:px-12 sm:py-14 animate-rise-in">
             <p className="text-xs uppercase tracking-[0.4em] text-brand-gold/80">
-              Charme Restaurant
+              {t(dict, "home.hero.eyebrow")}
             </p>
             <h1 className="mt-5 font-display text-4xl text-brand-ink sm:text-5xl lg:text-6xl">
-              Charme
+              {t(dict, "home.hero.title")}
             </h1>
             <p className="mt-4 text-base text-brand-ink/80 sm:text-lg">
-              Authentic Taste. Timeless Experience.
-            </p>
-            <p className="mt-6 text-sm text-brand-ink/70 sm:text-base">
-              An intimate Chinese and Taiwanese dining room with curated tasting menus,
-              ceremonial tea, and premium groceries.
+              {t(dict, "home.hero.subtitle")}
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
                 href={`/${locale}/${country}/menu`}
                 className="btn btn-gold shadow-soft hover:translate-y-[-1px]"
               >
-                View Menu
+                {t(dict, "home.hero.primaryCta")}
               </Link>
               <Link
                 href={`/${locale}/${country}/checkout`}
                 className="btn btn-outline hover:bg-brand-gold/10"
               >
-                Order Now
+                {t(dict, "home.hero.secondaryCta")}
               </Link>
             </div>
           </div>

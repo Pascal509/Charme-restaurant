@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import Container from "@/components/layout/Container";
 import { useCartStore } from "@/store/useCartStore";
+import { getDictionary, t } from "@/lib/i18n";
 
 type LoginState = {
   email: string;
@@ -22,6 +23,7 @@ export default function LoginPage({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { setItemCount } = useCartStore();
+  const dict = getDictionary(locale);
 
   const basePath = `/${locale}/${country}`;
 
@@ -37,7 +39,7 @@ export default function LoginPage({
     });
 
     if (!result || result.error) {
-      setError(result?.error || "Invalid email or password");
+      setError(t(dict, "auth.login.invalidCredentials"));
       setIsLoading(false);
       return;
     }
@@ -56,10 +58,10 @@ export default function LoginPage({
     <main className="bg-brand-rice">
       <Container className="py-12">
         <div className="mx-auto max-w-xl rounded-2xl border border-brand-ink/10 bg-white p-8 shadow-soft">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Welcome back</p>
-          <h1 className="mt-3 font-display text-3xl text-brand-ink">Sign in</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">{t(dict, "auth.login.eyebrow")}</p>
+          <h1 className="mt-3 font-display text-3xl text-brand-ink">{t(dict, "auth.login.title")}</h1>
           <p className="mt-2 text-sm text-brand-ink/70">
-            Sign in to track orders, manage your account, and save delivery details.
+            {t(dict, "auth.login.subtitle")}
           </p>
 
           {error ? (
@@ -71,7 +73,7 @@ export default function LoginPage({
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
-                Email
+                {t(dict, "auth.login.email")}
               </label>
               <input
                 type="email"
@@ -84,14 +86,14 @@ export default function LoginPage({
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/60">
-                Password
+                {t(dict, "auth.login.password")}
               </label>
               <input
                 type="password"
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
                 className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm text-brand-ink"
-                placeholder="Enter your password"
+                placeholder={t(dict, "auth.login.password")}
                 required
               />
             </div>
@@ -101,13 +103,13 @@ export default function LoginPage({
               disabled={isLoading}
               className="w-full rounded-md bg-brand-cinnabar px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-brand-cinnabar/60"
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? t(dict, "auth.login.signingIn") : t(dict, "auth.login.signIn")}
             </button>
           </form>
 
           <div className="mt-6 flex items-center gap-3 text-xs text-brand-ink/50">
             <span className="h-px flex-1 bg-brand-ink/10" />
-            or
+            {t(dict, "common.or")}
             <span className="h-px flex-1 bg-brand-ink/10" />
           </div>
 
@@ -117,13 +119,13 @@ export default function LoginPage({
             disabled={isLoading}
             className="mt-5 w-full rounded-md border border-brand-ink/15 bg-white px-4 py-3 text-sm font-semibold text-brand-ink disabled:cursor-not-allowed disabled:opacity-70"
           >
-            Continue with Google
+            {t(dict, "auth.login.google")}
           </button>
 
           <p className="mt-6 text-sm text-brand-ink/70">
-            No account yet?{" "}
+            {t(dict, "auth.login.noAccount")} {" "}
             <Link href={`${basePath}/auth/register`} className="font-semibold text-brand-ink">
-              Create one
+              {t(dict, "auth.login.createOne")}
             </Link>
           </p>
         </div>

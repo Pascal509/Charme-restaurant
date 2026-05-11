@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "Failed to register";
     const friendly = message.toLowerCase().includes("unique")
       ? "Email already registered"
-      : message;
+      : "Unable to register right now";
 
     return NextResponse.json({ error: friendly }, { status: 400 });
   }

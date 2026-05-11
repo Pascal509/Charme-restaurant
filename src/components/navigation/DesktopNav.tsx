@@ -4,6 +4,7 @@ import NavLinks from "@/components/navigation/NavLinks";
 import LocaleCountrySwitcher from "@/components/navigation/LocaleCountrySwitcher";
 import NotificationCenter from "@/features/notifications/components/NotificationCenter";
 import CartIconLink from "@/components/navigation/CartIconLink";
+import { getDictionary, t } from "@/lib/i18n";
 
 export default function DesktopNav({
   locale,
@@ -12,6 +13,8 @@ export default function DesktopNav({
   locale: string;
   country: string;
 }) {
+  const dict = getDictionary(locale);
+
   return (
     <div className="hidden w-full items-center justify-between lg:flex">
       <Link href={`/${locale}/${country}`} className="flex items-center gap-3">
@@ -27,7 +30,7 @@ export default function DesktopNav({
         </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold">Charme</p>
-          <p className="text-xs text-brand-ink/70">Supermarket & Restaurant</p>
+          <p className="text-xs text-brand-ink/70">{t(dict, "brand.tagline")}</p>
         </div>
       </Link>
       <nav className="flex items-center gap-10">

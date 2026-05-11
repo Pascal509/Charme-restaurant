@@ -5,6 +5,9 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
 import ImageWrapper from "@/components/ui/ImageWrapper";
 import { useCartStore } from "@/store/useCartStore";
+import LocaleSwitcher from "@/components/navigation/LocaleSwitcher";
+import { getDictionary, t, normalizeLocale } from "@/lib/i18n";
+import { resolveProductImage } from "@/lib/image-resolver";
 
 type MarketVariant = {
   id: string;
@@ -17,7 +20,10 @@ type MarketVariant = {
 type MarketProduct = {
   id: string;
   title: string;
+  titleZh?: string;
   description: string;
+  descriptionZh?: string;
+  imageUrl?: string | null;
   variant: MarketVariant;
 };
 
@@ -30,11 +36,13 @@ type MarketCategory = {
 
 type MarketPageProps = {
   categories: MarketCategory[];
+  locale?: string;
 };
 
 const CART_ADD_ENDPOINT = "/api/cart/add";
 
-export default function MarketPage({ categories }: MarketPageProps) {
+export default function MarketPage({ categories, locale }: MarketPageProps) {
+  const dict = getDictionary(locale);
   const ITEMS_PER_PAGE = 8;
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | "all">("all");
@@ -151,7 +159,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to add to cart");
+        throw new Error(error.error || t(dict, "messages.failedAddCart"));
       }
 
       return response.json();
@@ -180,7 +188,11 @@ export default function MarketPage({ categories }: MarketPageProps) {
     <main className="scroll-smooth bg-brand-obsidian text-brand-ink lux-gradient page-transition">
       <Container className="py-16 lg:py-20">
         <section className="rounded-3xl border border-brand-gold/10 bg-black/40 px-6 py-10 shadow-crisp sm:px-10 sm:py-12">
-          <p className="seal-badge">Market</p>
+          <div className="flex items-center justify-between">
+            <p className="seal-badge">{t(dict, "market.title")}</p>
+            <LocaleSwitcher currentLocale={locale ?? "en"} variant="inline" />
+          </div>
+
           <h1 className="mt-4 font-display text-3xl text-brand-ink sm:text-4xl lg:text-5xl">
             Asian Grocery Essentials
           </h1>
@@ -188,7 +200,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
             Pantry staples, premium sauces, and tea essentials curated for your home kitchen.
           </p>
           <div className="mt-6 flex items-center text-sm font-semibold text-brand-ink">
-            Cart
+            {t(dict, "nav.cart")}
             {cartBadge}
           </div>
         </section>
@@ -202,24 +214,24 @@ export default function MarketPage({ categories }: MarketPageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
                   Search
                 </p>
-                <h2 className="font-serif text-lg text-brand-ink">Find pantry essentials</h2>
+                <h2 className="font-serif text-lg text-brand-ink">{t(dict, "market.searchTitle")}</h2>
               </div>
               <div className="flex items-center gap-3 text-xs text-brand-ink/60">
-                <span>Filters update instantly</span>
+                <span>{t(dict, "market.filtersUpdateInstantly")}</span>
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr_1fr_auto]">
-              <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
-                Search products
+                <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
+                {t(dict, "market.searchPlaceholder")}
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by name"
+                  placeholder={t(dict, "market.searchPlaceholder")}
                   className="h-11 rounded-full border border-brand-gold/20 bg-black/20 px-4 text-sm font-medium text-brand-ink transition placeholder:text-brand-ink/40 focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
                 />
               </label>
               <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
-                Min price
+                {t(dict, "market.minPrice")}
                 <input
                   type="number"
                   min="0"
@@ -230,7 +242,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
                 />
               </label>
               <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
-                Max price
+                {t(dict, "market.maxPrice")}
                 <input
                   type="number"
                   min="0"
@@ -247,7 +259,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
                   onChange={(event) => setInStockOnly(event.target.checked)}
                   className="h-4 w-4 rounded border-brand-gold/40 bg-transparent text-brand-gold focus:ring-0"
                 />
-                In Stock
+                {t(dict, "market.inStockOnly")}
               </label>
             </div>
           </div>
@@ -300,7 +312,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
                         : "border-brand-gold/30 text-brand-ink/70"
                     }`}
                   >
-                    All
+                    {t(dict, "market.all")}
                   </button>
                   {categories.map((category) => (
                     <button
@@ -323,7 +335,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
 
               {filteredCategories.length === 0 ? (
                 <div className="rounded-2xl border border-brand-gold/10 bg-white/5 px-6 py-12 text-center text-sm text-brand-ink/70 transition">
-                  No products found. Try adjusting your filters.
+                  {t(dict, "market.noResults")} {t(dict, "market.adjustFilters")}
                 </div>
               ) : (
                 filteredCategories.map((category) => (
@@ -353,6 +365,8 @@ export default function MarketPage({ categories }: MarketPageProps) {
                                   })
                                 }
                                 isAdding={addMutation.isPending}
+                                locale={locale}
+                                dict={dict}
                               />
                             ))}
                           </div>
@@ -367,6 +381,7 @@ export default function MarketPage({ categories }: MarketPageProps) {
                                   [category.id]: nextPage
                                 }))
                               }
+                              dict={dict}
                             />
                           ) : null}
                         </>
@@ -386,13 +401,18 @@ export default function MarketPage({ categories }: MarketPageProps) {
 function ProductCard({
   product,
   onAdd,
-  isAdding
+  isAdding,
+  locale,
+  dict
 }: {
   product: MarketProduct;
   onAdd: (quantity: number) => void;
   isAdding: boolean;
+  locale?: string;
+  dict: ReturnType<typeof getDictionary>;
 }) {
   const [quantity, setQuantity] = useState(1);
+  const localeNormalized = normalizeLocale(locale);
   const priceLabel = formatCurrency(product.variant.amountMinor, product.variant.currency);
   const outOfStock = product.variant.stockOnHand <= 0;
   const lowStock = product.variant.stockOnHand > 0 && product.variant.stockOnHand <= 10;
@@ -412,12 +432,12 @@ function ProductCard({
       />
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-serif text-base font-medium tracking-wide text-brand-ink sm:text-lg">
-          {product.title}
+          {localeNormalized === "zh-CN" ? (product.titleZh ?? product.title) : product.title}
         </h3>
         <span className="text-sm font-semibold text-brand-gold">{priceLabel}</span>
       </div>
-      {product.description ? (
-        <p className="mt-2 line-clamp-2 text-xs text-brand-ink/60">{product.description}</p>
+      {product.description || product.descriptionZh ? (
+        <p className="mt-2 line-clamp-2 text-xs text-brand-ink/60">{localeNormalized === "zh-CN" ? (product.descriptionZh ?? product.description) : product.description}</p>
       ) : null}
       <div className="mt-3 flex items-center justify-between text-xs">
         <span
@@ -429,14 +449,18 @@ function ProductCard({
                 : "border-brand-jade/40 text-brand-jade"
           }`}
         >
-          {outOfStock ? "Out of Stock" : lowStock ? "Low Stock" : "In Stock"}
+          {outOfStock
+              ? t(dict, "market.outOfStock")
+              : lowStock
+                ? t(dict, "market.lowStock")
+                : t(dict, "market.inStock")}
         </span>
         <div className="flex items-center gap-2 rounded-full border border-brand-gold/20 px-2 py-1">
           <button
             type="button"
             onClick={() => setQuantity((value) => Math.max(1, value - 1))}
             className="text-brand-ink/70 transition hover:text-brand-gold"
-            aria-label="Decrease quantity"
+            aria-label={t(dict, "market.decreaseQuantity")}
           >
             -
           </button>
@@ -447,7 +471,7 @@ function ProductCard({
             type="button"
             onClick={() => setQuantity((value) => Math.min(20, value + 1))}
             className="text-brand-ink/70 transition hover:text-brand-gold"
-            aria-label="Increase quantity"
+            aria-label={t(dict, "market.increaseQuantity")}
           >
             +
           </button>
@@ -458,7 +482,7 @@ function ProductCard({
         disabled={outOfStock || isAdding}
         className="mt-4 rounded-full bg-brand-gold px-4 py-2 text-xs font-semibold text-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:bg-brand-ink/20"
       >
-        {outOfStock ? "Out of Stock" : "Add to Cart"}
+        {outOfStock ? t(dict, "market.outOfStock") : t(dict, "market.addToCart")}
       </button>
     </div>
   );
@@ -468,19 +492,21 @@ function PaginationBar({
   currentPage,
   totalPages,
   onPageChange,
-  className
+  className,
+  dict
 }: {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
   className?: string;
+  dict: ReturnType<typeof getDictionary>;
 }) {
   const pageItems = buildPaginationItems(currentPage, totalPages);
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-4 ${className ?? ""}`}>
       <p className="text-xs uppercase tracking-[0.25em] text-brand-ink/50">
-        Showing page {currentPage} of {totalPages}
+        {t(dict, "market.showingPage").replace("{current}", String(currentPage)).replace("{total}", String(totalPages))}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -489,7 +515,7 @@ function PaginationBar({
           disabled={currentPage === 1}
           className="rounded-full border border-brand-gold/20 px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:border-brand-gold/40 hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Prev
+          {t(dict, "common.prev")}
         </button>
         <button
           type="button"
@@ -497,7 +523,7 @@ function PaginationBar({
           disabled={currentPage === totalPages}
           className="rounded-full border border-brand-gold/20 px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:border-brand-gold/40 hover:text-brand-gold disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Next
+          {t(dict, "common.next")}
         </button>
         {pageItems.map((pageItem, index) =>
           pageItem === "ellipsis" ? (
@@ -574,66 +600,5 @@ function scrollToCategory(id: string) {
 }
 
 function getMarketImage(productName: string) {
-  const name = productName.toLowerCase();
-  const needsTopCrop = name.includes("soup") || name.includes("noodle") || name.includes("bowl");
-  const position = needsTopCrop ? "object-top" : "object-center";
-
-  if (name.includes("instant") || name.includes("ramen") || name.includes("noodle") || name.includes("udon") || name.includes("jjajang") || name.includes("tom yum")) {
-    if (name.includes("cheese")) return { src: "/sup_images/cheese-ramen-soup.jpg", position };
-    if (name.includes("beef bone")) return { src: "/sup_images/nongshim-beef-bone-ramen.jpg", position };
-    if (name.includes("black pepper")) return { src: "/sup_images/koka-black-pepper-fried-noodles.jpg", position };
-    if (name.includes("spicy beef")) return { src: "/sup_images/koka-spicy-beef-flavor-noodles.jpg", position };
-    if (name.includes("chicken")) return { src: "/sup_images/koka-chicken-flavor-noodles.jpg", position };
-    if (name.includes("jajang") || name.includes("jjajang")) return { src: "/sup_images/paldo-black-bean-sauce-noodles.jpg", position };
-    if (name.includes("ramyun") || name.includes("ramen")) return { src: "/sup_images/shim-ramyun.jpg", position };
-    if (name.includes("udon")) return { src: "/sup_images/nongshim-udon-ramen.jpg", position };
-    if (name.includes("tom yum")) return { src: "/sup_images/tomyun-soup-instant-noodles.jpg", position };
-    return { src: "/sup_images/instant-noodles.jpg", position };
-  }
-  if (name.includes("rice cake") || name.includes("tteokbokki") || name.includes("tteok")) {
-    if (name.includes("cheese")) return { src: "/sup_images/bibigo-cheese-tteokbokki-rice-cakes.jpg", position };
-    return { src: "/sup_images/bibigo-original-tteokbokki-rice-cakes.jpg", position };
-  }
-  if (name.includes("soy sauce") || name.includes("soy") || name.includes("seasoning") || name.includes("paste") || name.includes("sauce") || name.includes("marinade") || name.includes("dressing") || name.includes("curry") || name.includes("gochujang") || name.includes("ssamjang") || name.includes("teriyaki") || name.includes("sesame")) {
-    if (name.includes("bulgogi")) return { src: "/sup_images/sempio-korean-bbq-bulgogi-sauce.jpg", position };
-    if (name.includes("kewpie") || name.includes("mayonnaise")) return { src: "/sup_images/kewpie-mayonnaise.jpg", position };
-    if (name.includes("sesame")) return { src: "/sup_images/kewpie-roasted-sesame-dressing.jpg", position };
-    if (name.includes("teriyaki")) return { src: "/sup_images/teriyaki-sauce.jpg", position };
-    if (name.includes("gochujang")) return { src: "/sup_images/sempio-guchujang-korean-chili-paste.jpg", position };
-    if (name.includes("ssamjang")) return { src: "/sup_images/sempio-ssamjang-korean-soybean-dipping-paste.jpg", position };
-    if (name.includes("curry")) return { src: "/sup_images/house-kokumaro-curry.jpg", position };
-    if (name.includes("soybean paste") || name.includes("doenjang") || name.includes("tojang") || name.includes("deonchang")) return { src: "/sup_images/sempio-tojang-soybean-paste.jpg", position };
-    return { src: "/sup_images/soy-sauce-for-dumplings.jpg", position };
-  }
-  if (name.includes("snack") || name.includes("chips") || name.includes("cracker") || name.includes("cookie") || name.includes("pocky") || name.includes("pretz") || name.includes("popcorn") || name.includes("wafers") || name.includes("biscuit") || name.includes("waffle")) {
-    if (name.includes("seaweed")) return { src: "/sup_images/seasoned-seaweed.jpg", position };
-    if (name.includes("chili") || name.includes("spicy")) return { src: "/sup_images/calbee-hot-&-spicy-potato-chips.jpg", position };
-    if (name.includes("garlic")) return { src: "/sup_images/garlic-shrimp-chips.jpg", position };
-    if (name.includes("butter")) return { src: "/sup_images/butter-garlic-shrimp-chips.jpg", position };
-    if (name.includes("pocky")) return { src: "/sup_images/pocky-chocolate.jpg", position };
-    if (name.includes("pretz")) return { src: "/sup_images/pretz-salt-butter-flavor.jpg", position };
-    if (name.includes("popcorn")) return { src: "/sup_images/salt-popcorn.jpg", position };
-    if (name.includes("wafers")) return { src: "/sup_images/beatrix-potter-wafers.jpg", position };
-    if (name.includes("cookie")) return { src: "/sup_images/oreo-biscuits.jpg", position };
-    return { src: "/sup_images/zzang-snack.jpg", position };
-  }
-  if (name.includes("drink") || name.includes("soda") || name.includes("water") || name.includes("milk") || name.includes("tea") || name.includes("juice") || name.includes("coffee") || name.includes("sparkling")) {
-    if (name.includes("water")) return { src: "/sup_images/aqua-panna-natural-mineral-water.jpg", position: "object-center" };
-    if (name.includes("milk")) return { src: "/sup_images/binggrae-banana-flavored-milk.jpg", position: position };
-    if (name.includes("tea")) return { src: "/sup_images/calpis-soda-drink.jpg", position: "object-top" };
-    if (name.includes("coffee")) return { src: "/sup_images/maxwell-house-maxwell-coffee.jpg", position };
-    return { src: "/sup_images/ambasa-drink.jpg", position: "object-top" };
-  }
-  if (name.includes("detergent") || name.includes("soap") || name.includes("shampoo") || name.includes("cream") || name.includes("lotion") || name.includes("deodorant") || name.includes("sunscreen")) {
-    if (name.includes("detergent")) return { src: "/sup_images/ariel-detergent.jpg", position };
-    if (name.includes("shampoo")) return { src: "/sup_images/aquair-foaming-shampoo.jpg", position };
-    if (name.includes("cream")) return { src: "/sup_images/dove-moisturizing-cream.jpg", position };
-    if (name.includes("lotion") || name.includes("sunscreen")) return { src: "/sup_images/anessa-uv-screen.jpg", position };
-    return { src: "/sup_images/irish-spring-soap.jpg", position };
-  }
-  if (name.includes("fruit") || name.includes("vegetable") || name.includes("veges")) {
-    return { src: "/sup_images/fruits-and-veges.jpg", position };
-  }
-
-  return { src: "/sup_images/korean-staples.jpg", position };
+  return resolveProductImage(productName);
 }

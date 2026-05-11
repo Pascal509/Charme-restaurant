@@ -1,9 +1,15 @@
 import { Worker } from "bullmq";
-import { redis } from "@/lib/queue/redis";
+import { getRedisClient, warnRedisUnavailable } from "@/lib/queue/redis";
 import { processDomainEvent } from "@/lib/queue/eventWorker";
 import { log } from "@/lib/logger";
 
 export function startEventWorker() {
+  const redis = getRedisClient();
+  if (!redis) {
+    warnRedisUnavailable("Domain event worker startup");
+    return null;
+  }
+
   const worker = new Worker(
     "domain-events",
     async (job) => {

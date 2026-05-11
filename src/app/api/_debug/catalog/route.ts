@@ -19,8 +19,8 @@ export async function GET() {
       sampleMenu: menus.slice(0, 3).map((c) => ({ id: c.id, name: c.name, items: c.items.length })),
       sampleMarket: markets.slice(0, 3).map((c) => ({ id: c.id, name: c.name, products: c.products.length }))
     });
-  } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "unknown" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Catalog debug data unavailable" }, { status: 500 });
   }
 }
 

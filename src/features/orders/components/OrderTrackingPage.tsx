@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Container from "@/components/layout/Container";
 import { useOrderRealtime, type OrderRealtimeUpdate } from "@/hooks/useOrderRealtime";
+import { t, type DictionaryType } from "@/lib/i18n";
 
 export type OrderItem = {
   id: string;
@@ -37,21 +38,26 @@ export type OrderTrackingData = {
 
 type TimelineStep = {
   key: string;
-  label: string;
-  helper: string;
+  labelKey: string;
+  helperKey: string;
 };
 
 const TIMELINE: TimelineStep[] = [
-  { key: "PLACED", label: "Placed", helper: "Order received" },
-  { key: "PREPARING", label: "Preparing", helper: "Kitchen is working" },
-  { key: "READY", label: "Ready", helper: "Packed and ready" },
-  { key: "OUT_FOR_DELIVERY", label: "On the way", helper: "Courier en route" },
-  { key: "DELIVERED", label: "Delivered", helper: "Enjoy your meal" }
+  { key: "PLACED", labelKey: "orders.placed", helperKey: "orders.placedHelper" },
+  { key: "PREPARING", labelKey: "orders.preparing", helperKey: "orders.preparingHelper" },
+  { key: "READY", labelKey: "orders.ready", helperKey: "orders.readyHelper" },
+  { key: "OUT_FOR_DELIVERY", labelKey: "orders.onTheWay", helperKey: "orders.onTheWayHelper" },
+  { key: "DELIVERED", labelKey: "orders.delivered", helperKey: "orders.deliveredHelper" }
 ];
 
 const STATUS_ORDER = ["PENDING", "ACCEPTED", "PREPARING", "READY", "OUT_FOR_DELIVERY", "DELIVERED"];
 
-export default function OrderTrackingPage({ order }: { order: OrderTrackingData }) {
+type OrderTrackingPageProps = {
+  order: OrderTrackingData;
+  dict: DictionaryType;
+};
+
+export default function OrderTrackingPage({ order, dict }: OrderTrackingPageProps) {
   const [currentOrder, setCurrentOrder] = useState<OrderTrackingData>(order);
   const { connectionState, lastError, lastEvent } = useOrderRealtime(order.id);
 
@@ -61,17 +67,19 @@ export default function OrderTrackingPage({ order }: { order: OrderTrackingData 
   }, [lastEvent]);
 
   const stepIndex = resolveStepIndex(currentOrder.status);
-  const deliveryLabel = currentOrder.orderType === "DELIVERY" ? "Delivery" : "Pickup";
+  const deliveryLabel = currentOrder.orderType === "DELIVERY" ? t(dict, "orders.deliveryLabel") : t(dict, "orders.pickupLabel");
 
   return (
     <main className="bg-brand-rice">
       <Container className="py-10">
         <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Order tracking</p>
-          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">Order {currentOrder.id}</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">{t(dict, "orders.tracking")}</p>
+          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">
+            {t(dict, "orders.orderPrefix")} {currentOrder.id}
+          </h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-brand-ink/70">
-            <StatusBadge status={currentOrder.status} />
-            <StatusBadge status={currentOrder.paymentStatus} variant="payment" />
+            <StatusBadge status={currentOrder.status} dict={dict} />
+            <StatusBadge status={currentOrder.paymentStatus} variant="payment" dict={dict} />
             <span className="rounded-full border border-brand-ink/10 px-3 py-1 text-xs uppercase tracking-[0.2em]">
               {deliveryLabel}
             </span>
@@ -85,8 +93,8 @@ export default function OrderTrackingPage({ order }: { order: OrderTrackingData 
             <div className="space-y-6">
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-brand-ink">Timeline</h2>
-                  <ConnectionChip state={connectionState} />
+                  <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "orders.timeline")}</h2>
+                  <ConnectionChip state={connectionState} dict={dict} />
                 </div>
 
                 {lastError ? (
@@ -103,21 +111,22 @@ export default function OrderTrackingPage({ order }: { order: OrderTrackingData 
                       active={index <= stepIndex}
                       current={index === stepIndex}
                       timestamp={resolveTimestamp(step.key, currentOrder)}
+                      dict={dict}
                     />
                   ))}
                 </div>
               </div>
 
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
-                <h2 className="text-lg font-semibold text-brand-ink">Items</h2>
+                <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "orders.items")}</h2>
                 <div className="mt-4 space-y-3">
                   {currentOrder.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between text-sm">
                       <div>
                         <p className="font-semibold text-brand-ink">
-                          {item.menuItemTitle || item.productVariantTitle || "Item"}
+                          {item.menuItemTitle || item.productVariantTitle || t(dict, "orders.itemFallback")}
                         </p>
-                        <p className="text-xs text-brand-ink/60">Qty {item.quantity}</p>
+                        <p className="text-xs text-brand-ink/60">{t(dict, "orders.qty")} {item.quantity}</p>
                       </div>
                       <span className="font-semibold text-brand-ink">
                         {formatCurrency(item.unitAmountMinor * item.quantity, item.currency)}
@@ -130,29 +139,29 @@ export default function OrderTrackingPage({ order }: { order: OrderTrackingData 
 
             <aside className="space-y-6">
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
-                <h2 className="text-lg font-semibold text-brand-ink">Delivery status</h2>
+                <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "orders.deliveryStatus")}</h2>
                 <p className="mt-2 text-sm text-brand-ink/70">
-                  {buildDeliveryMessage(currentOrder)}
+                  {buildDeliveryMessage(currentOrder, dict)}
                 </p>
               </div>
 
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
-                <h2 className="text-lg font-semibold text-brand-ink">Totals</h2>
+                <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "orders.totals")}</h2>
                 <div className="mt-4 space-y-2 text-sm text-brand-ink/70">
                   <div className="flex items-center justify-between">
-                    <span>Subtotal</span>
+                    <span>{t(dict, "orders.subtotal")}</span>
                     <span>{formatCurrency(currentOrder.subtotalAmountMinor, currentOrder.displayCurrency)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Tax</span>
+                    <span>{t(dict, "orders.tax")}</span>
                     <span>{formatCurrency(currentOrder.taxAmountMinor, currentOrder.displayCurrency)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Delivery fee</span>
+                    <span>{t(dict, "orders.deliveryFee")}</span>
                     <span>{formatCurrency(currentOrder.deliveryFeeAmountMinor, currentOrder.displayCurrency)}</span>
                   </div>
                   <div className="flex items-center justify-between border-t border-brand-ink/10 pt-3 text-base font-semibold text-brand-ink">
-                    <span>Total</span>
+                    <span>{t(dict, "orders.total")}</span>
                     <span>{formatCurrency(currentOrder.totalAmountMinor, currentOrder.displayCurrency)}</span>
                   </div>
                 </div>
@@ -165,17 +174,17 @@ export default function OrderTrackingPage({ order }: { order: OrderTrackingData 
   );
 }
 
-function ConnectionChip({ state }: { state: string }) {
+function ConnectionChip({ state, dict }: { state: string; dict: DictionaryType }) {
   const label =
     state === "connected"
-      ? "Live"
+      ? t(dict, "orders.live")
       : state === "reconnecting"
-      ? "Reconnecting"
+      ? t(dict, "orders.reconnecting")
       : state === "error"
-      ? "Offline"
+      ? t(dict, "orders.offline")
       : state === "disconnected"
-      ? "Disconnected"
-      : "Connecting";
+      ? t(dict, "orders.disconnected")
+      : t(dict, "orders.connecting");
 
   const color =
     state === "connected"
@@ -189,9 +198,20 @@ function ConnectionChip({ state }: { state: string }) {
   );
 }
 
-function StatusBadge({ status, variant }: { status: string; variant?: "payment" }) {
+function StatusBadge({ status, variant, dict }: { status: string; variant?: "payment"; dict: DictionaryType }) {
   const normalized = status.replace(/_/g, " ");
-  const label = variant === "payment" ? `Payment ${normalized}` : normalized;
+  const label =
+    variant === "payment"
+      ? `${t(dict, "orders.paymentPrefix")} ${
+          status === "PAID"
+            ? t(dict, "orders.statusPaid")
+            : status === "FAILED"
+            ? t(dict, "orders.statusFailed")
+            : status === "CANCELLED"
+            ? t(dict, "orders.statusCancelled")
+            : normalized
+        }`
+      : normalized;
   const style =
     status === "DELIVERED" || status === "PAID"
       ? "bg-brand-jade/10 text-brand-jade"
@@ -206,12 +226,14 @@ function TimelineRow({
   step,
   active,
   current,
-  timestamp
+  timestamp,
+  dict
 }: {
   step: TimelineStep;
   active: boolean;
   current: boolean;
   timestamp?: string | null;
+  dict: DictionaryType;
 }) {
   return (
     <div className="flex items-start gap-4">
@@ -225,9 +247,9 @@ function TimelineRow({
       </div>
       <div>
         <p className={`text-sm font-semibold ${active ? "text-brand-ink" : "text-brand-ink/40"}`}>
-          {step.label}
+          {t(dict, step.labelKey)}
         </p>
-        <p className="text-xs text-brand-ink/60">{step.helper}</p>
+        <p className="text-xs text-brand-ink/60">{t(dict, step.helperKey)}</p>
         {timestamp ? <p className="mt-1 text-xs text-brand-ink/50">{formatTime(timestamp)}</p> : null}
       </div>
     </div>
@@ -266,16 +288,16 @@ function resolveTimestamp(stepKey: string, order: OrderTrackingData) {
   return order.createdAt;
 }
 
-function buildDeliveryMessage(order: OrderTrackingData) {
+function buildDeliveryMessage(order: OrderTrackingData, dict: DictionaryType) {
   if (order.orderType === "PICKUP") {
-    if (order.status === "READY") return "Your order is ready for pickup.";
-    if (order.status === "DELIVERED") return "Order picked up. Enjoy.";
-    return "We will let you know when your order is ready to collect.";
+    if (order.status === "READY") return t(dict, "orders.pickupReady");
+    if (order.status === "DELIVERED") return t(dict, "orders.pickupDelivered");
+    return t(dict, "orders.pickupWaiting");
   }
 
-  if (order.status === "OUT_FOR_DELIVERY") return "Your courier is on the way.";
-  if (order.status === "DELIVERED") return "Delivered. Enjoy your meal.";
-  return "We will update you as soon as your order is dispatched.";
+  if (order.status === "OUT_FOR_DELIVERY") return t(dict, "orders.deliveryOnWay");
+  if (order.status === "DELIVERED") return t(dict, "orders.deliveryDelivered");
+  return t(dict, "orders.deliveryWaiting");
 }
 
 function formatCurrency(amountMinor: number, currency: string) {

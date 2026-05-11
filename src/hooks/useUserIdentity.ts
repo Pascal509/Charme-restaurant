@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
-export function useUserIdentity() {
+export function useUserIdentity(fallbackErrorMessage = "") {
   const { status } = useSession();
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,16 +24,16 @@ export function useUserIdentity() {
       .then((payload: { ok?: boolean; userId?: string | null; error?: string }) => {
         if (!active) return;
         if (!payload.ok || !payload.userId) {
-          setError(payload.error || "Unable to load session identity");
+          setError(fallbackErrorMessage || "");
           setUserId(null);
         } else {
           setUserId(payload.userId);
           setError(null);
         }
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Unable to load session identity");
+        setError(fallbackErrorMessage || "");
         setUserId(null);
       })
       .finally(() => {
@@ -43,7 +43,7 @@ export function useUserIdentity() {
     return () => {
       active = false;
     };
-  }, [status]);
+  }, [status, fallbackErrorMessage]);
 
   return {
     userId,

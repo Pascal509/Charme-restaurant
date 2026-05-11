@@ -20,7 +20,9 @@ export const cartService = (() => {
   const isStaticMode = env.CATALOG_READ_SOURCE === "static";
   
   if (isStaticMode) {
-    console.info("[CartService] Running in STATIC mode (in-memory cart, no database)");
+    if (process.env.SHOW_DEMO_LOGS === "1") {
+      console.info("[CartService] Running in STATIC mode (in-memory cart, no database)");
+    }
     return {
       getOrCreateCart: memoryCart.getOrCreateCart,
       getActiveCart: memoryCart.getActiveCart,
@@ -31,7 +33,9 @@ export const cartService = (() => {
       mergeCarts: memoryCart.mergeCarts
     };
   } else {
-    console.info("[CartService] Running in PRISMA mode (database-backed cart)");
+    if (process.env.SHOW_DEMO_LOGS === "1") {
+      console.info("[CartService] Running in PRISMA mode (database-backed cart)");
+    }
     return {
       getOrCreateCart,
       getActiveCart,

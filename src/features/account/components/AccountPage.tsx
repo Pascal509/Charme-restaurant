@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
 import { useCartStore } from "@/store/useCartStore";
 import AddressManager from "@/features/addresses/components/AddressManager";
+import { getDictionary, t } from "@/lib/i18n";
 
 type OrderSummary = {
   id: string;
@@ -32,6 +33,7 @@ export default function AccountPage({
   const { data: session, status } = useSession();
   const [mergeError, setMergeError] = useState<string | null>(null);
   const { setItemCount } = useCartStore();
+  const dict = getDictionary(locale);
 
   const ordersQuery = useQuery<OrdersResponse>({
     queryKey: ["orders"],
@@ -39,8 +41,7 @@ export default function AccountPage({
     queryFn: async () => {
       const response = await fetch("/api/orders");
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load orders");
+        throw new Error(t(dict, "account.ordersError"));
       }
       return response.json();
     }
@@ -48,10 +49,10 @@ export default function AccountPage({
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    mergeGuestCart(setItemCount).catch((error) => {
-      setMergeError(error instanceof Error ? error.message : "Failed to merge cart");
+    mergeGuestCart(setItemCount).catch(() => {
+      setMergeError(t(dict, "account.mergeError"));
     });
-  }, [status, setItemCount]);
+  }, [status, setItemCount, dict]);
 
   const basePath = `/${locale}/${country}`;
   const user = session?.user ?? null;
@@ -67,10 +68,10 @@ export default function AccountPage({
     <main className="bg-brand-rice">
       <Container className="py-10">
         <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Account</p>
-          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">Welcome back</h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">{t(dict, "account.eyebrow")}</p>
+          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">{t(dict, "account.title")}</h1>
           <p className="max-w-2xl text-sm text-brand-ink/70">
-            Manage your details, review past orders, and keep delivery information close.
+            {t(dict, "account.subtitle")}
           </p>
         </div>
       </Container>
@@ -81,12 +82,12 @@ export default function AccountPage({
             <div className="space-y-6">
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-brand-ink">Profile</h2>
+                  <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "account.profile")}</h2>
                   <button
                     onClick={() => signOut({ callbackUrl: basePath })}
                     className="text-xs font-semibold text-brand-cinnabar"
                   >
-                    Log out
+                    {t(dict, "account.logOut")}
                   </button>
                 </div>
 
@@ -98,9 +99,9 @@ export default function AccountPage({
                 ) : (
                   <div className="mt-4 space-y-2 text-sm text-brand-ink/70">
                     <p className="text-base font-semibold text-brand-ink">
-                      {user?.name || "Guest customer"}
+                      {user?.name || t(dict, "account.guestCustomer")}
                     </p>
-                    <p>{user?.email || "No email on file"}</p>
+                    <p>{user?.email || t(dict, "account.noEmail")}</p>
                     {user && "role" in user ? (
                       <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">
                         {String(user.role)}
@@ -117,14 +118,14 @@ export default function AccountPage({
 
                 {latestOrder ? (
                   <div className="mt-6 rounded-md border border-brand-ink/10 bg-brand-ink/5 px-3 py-3 text-sm text-brand-ink/70">
-                    <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">Latest order</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">{t(dict, "account.latestOrder")}</p>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="font-semibold text-brand-ink">{latestOrder.id}</span>
                       <Link
                         href={`${basePath}/orders/${latestOrder.id}`}
                         className="text-xs font-semibold text-brand-ink"
                       >
-                        Track
+                        {t(dict, "account.track")}
                       </Link>
                     </div>
                   </div>
@@ -132,9 +133,9 @@ export default function AccountPage({
               </div>
 
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
-                <h2 className="text-lg font-semibold text-brand-ink">Saved addresses</h2>
+                <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "account.savedAddresses")}</h2>
                 <div className="mt-4">
-                  <AddressManager />
+                  <AddressManager dict={dict} />
                 </div>
               </div>
             </div>
@@ -142,8 +143,10 @@ export default function AccountPage({
             <div className="space-y-6">
               <div className="rounded-xl border border-brand-ink/10 bg-white p-6 shadow-soft">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-brand-ink">Order history</h2>
-                  <span className="text-xs text-brand-ink/60">{orders.length} orders</span>
+                  <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "account.orderHistory")}</h2>
+                  <span className="text-xs text-brand-ink/60">
+                    {t(dict, "account.ordersCount").replace("{count}", String(orders.length))}
+                  </span>
                 </div>
 
                 {ordersQuery.isLoading ? (
@@ -154,11 +157,11 @@ export default function AccountPage({
                   </div>
                 ) : ordersQuery.isError ? (
                   <div className="mt-4 rounded-md border border-brand-cinnabar/30 bg-brand-cinnabar/5 px-3 py-2 text-sm text-brand-cinnabar">
-                    Unable to load orders. Please try again.
+                    {t(dict, "account.ordersError")}
                   </div>
                 ) : !hasOrders ? (
                   <div className="mt-4 rounded-md border border-brand-ink/10 bg-brand-ink/5 px-3 py-3 text-sm text-brand-ink/60">
-                    No orders yet. Start your first order from the menu.
+                    {t(dict, "account.noOrders")}
                   </div>
                 ) : (
                   <div className="mt-4 space-y-3">
@@ -170,7 +173,7 @@ export default function AccountPage({
                         <div>
                           <p className="font-semibold text-brand-ink">{order.id}</p>
                           <p className="text-xs text-brand-ink/60">
-                            {formatDate(order.createdAt)} · {order.orderType}
+                            {formatDate(order.createdAt)} · {order.orderType === "DELIVERY" ? t(dict, "orders.deliveryLabel") : t(dict, "orders.pickupLabel")}
                           </p>
                         </div>
                         <div className="text-right">
@@ -178,12 +181,12 @@ export default function AccountPage({
                             {formatCurrency(order.totalAmountMinor, order.displayCurrency)}
                           </p>
                           <div className="mt-1 flex items-center justify-end gap-2 text-xs">
-                            <StatusBadge status={order.status} />
+                            <StatusBadge status={order.status} dict={dict} />
                             <Link
                               href={`${basePath}/orders/${order.id}`}
                               className="font-semibold text-brand-ink"
                             >
-                              Track
+                              {t(dict, "account.track")}
                             </Link>
                           </div>
                         </div>
@@ -220,8 +223,15 @@ async function mergeGuestCart(setItemCount: (count: number) => void) {
   }
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const normalized = status.replace(/_/g, " ");
+function StatusBadge({ status, dict }: { status: string; dict: ReturnType<typeof getDictionary> }) {
+  const label =
+    status === "DELIVERED"
+      ? t(dict, "orders.delivered")
+      : status === "CANCELLED"
+      ? t(dict, "orders.statusCancelled")
+      : status === "FAILED"
+      ? t(dict, "orders.statusFailed")
+      : status.replace(/_/g, " ");
   const style =
     status === "DELIVERED"
       ? "bg-brand-jade/10 text-brand-jade"
@@ -229,7 +239,7 @@ function StatusBadge({ status }: { status: string }) {
       ? "bg-brand-cinnabar/10 text-brand-cinnabar"
       : "bg-brand-ink/10 text-brand-ink/70";
 
-  return <span className={`rounded-full px-2 py-1 ${style}`}>{normalized}</span>;
+  return <span className={`rounded-full px-2 py-1 ${style}`}>{label}</span>;
 }
 
 function formatCurrency(amountMinor: number, currency: string) {

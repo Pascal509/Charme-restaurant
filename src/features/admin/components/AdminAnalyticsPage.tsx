@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
+import { getDictionary, t } from "@/lib/i18n";
 
 const ANALYTICS_ENDPOINT = "/api/admin/analytics?days=30";
 
@@ -29,14 +30,15 @@ type AnalyticsResponse = {
   }>;
 };
 
-export default function AdminAnalyticsPage() {
+export default function AdminAnalyticsPage({ locale }: { locale: string }) {
+  const dict = getDictionary(locale);
   const analyticsQuery = useQuery<AnalyticsResponse>({
     queryKey: ["admin-analytics", 30],
     queryFn: async () => {
       const response = await fetch(ANALYTICS_ENDPOINT, { cache: "no-store" });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to load analytics");
+        throw new Error(payload.error || t(dict, "admin.analytics.error"));
       }
       return response.json();
     },
@@ -53,18 +55,20 @@ export default function AdminAnalyticsPage() {
     <main className="bg-brand-rice">
       <Container className="py-10">
         <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Admin</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">
+            {t(dict, "admin.analytics.eyebrow")}
+          </p>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">
-                Analytics
+                {t(dict, "admin.analytics.title")}
               </h1>
               <p className="mt-2 text-sm text-brand-ink/70">
-                Daily revenue, order velocity, and top selling items.
+                {t(dict, "admin.analytics.subtitle")}
               </p>
             </div>
             <span className="rounded-full border border-brand-ink/10 bg-white px-3 py-1 text-xs text-brand-ink/60">
-              Last 30 days
+              {t(dict, "admin.analytics.period")}
             </span>
           </div>
         </div>
@@ -74,55 +78,63 @@ export default function AdminAnalyticsPage() {
         <Container className="py-8">
           {analyticsQuery.isLoading ? (
             <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
-              Loading analytics...
+              {t(dict, "admin.analytics.loading")}
             </div>
           ) : analyticsQuery.isError ? (
             <div className="rounded-lg border border-brand-cinnabar/30 bg-white p-6 text-sm text-brand-cinnabar">
-              Failed to load analytics.
+              {t(dict, "admin.analytics.error")}
             </div>
           ) : data ? (
             <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-6">
                 <div className="rounded-lg border border-brand-ink/10 bg-white p-5 shadow-soft">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-brand-ink">Daily revenue</h2>
+                    <h2 className="text-lg font-semibold text-brand-ink">
+                      {t(dict, "admin.analytics.dailyRevenue")}
+                    </h2>
                     <span className="text-xs text-brand-ink/60">
                       {formatCurrency(data.summary.revenueMinor, data.currency)}
                     </span>
                   </div>
                   <div className="mt-4 rounded-md border border-brand-ink/10 bg-brand-rice px-4 py-6">
                     {linePoints.length === 0 ? (
-                      <p className="text-sm text-brand-ink/60">No revenue data yet.</p>
+                      <p className="text-sm text-brand-ink/60">
+                        {t(dict, "admin.analytics.noRevenueData")}
+                      </p>
                     ) : (
                       <LineChart points={linePoints} />
                     )}
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <MetricCard label="Order count" value={String(data.summary.orderCount)} />
                     <MetricCard
-                      label="Average order"
+                      label={t(dict, "admin.analytics.orderCount")}
+                      value={String(data.summary.orderCount)}
+                    />
+                    <MetricCard
+                      label={t(dict, "admin.analytics.averageOrder")}
                       value={formatCurrency(data.summary.averageOrderValueMinor, data.currency)}
                     />
-                    <MetricCard
-                      label="Revenue"
-                      value={formatCurrency(data.summary.revenueMinor, data.currency)}
-                    />
+                    <MetricCard label={t(dict, "admin.analytics.revenue")} value={formatCurrency(data.summary.revenueMinor, data.currency)} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-6">
                 <div className="rounded-lg border border-brand-ink/10 bg-white p-5 shadow-soft">
-                  <h2 className="text-lg font-semibold text-brand-ink">Top selling items</h2>
+                  <h2 className="text-lg font-semibold text-brand-ink">
+                    {t(dict, "admin.analytics.topSellingItems")}
+                  </h2>
                   <div className="mt-4 space-y-4">
                     {data.topItems.length === 0 ? (
-                      <p className="text-sm text-brand-ink/60">No sales yet.</p>
+                      <p className="text-sm text-brand-ink/60">{t(dict, "admin.analytics.noSalesYet")}</p>
                     ) : (
                       data.topItems.map((item) => (
                         <div key={item.menuItemId} className="space-y-2">
                           <div className="flex items-center justify-between text-sm text-brand-ink/70">
                             <span className="font-semibold text-brand-ink">{item.name}</span>
-                            <span>{item.quantity} sold</span>
+                            <span>
+                              {item.quantity} {t(dict, "admin.analytics.soldSuffix")}
+                            </span>
                           </div>
                           <div className="h-2 rounded-full bg-brand-ink/10">
                             <div
@@ -142,10 +154,14 @@ export default function AdminAnalyticsPage() {
                 </div>
 
                 <div className="rounded-lg border border-brand-ink/10 bg-white p-5 shadow-soft">
-                  <h2 className="text-lg font-semibold text-brand-ink">Order volume</h2>
+                  <h2 className="text-lg font-semibold text-brand-ink">
+                    {t(dict, "admin.analytics.orderVolume")}
+                  </h2>
                   <div className="mt-4 rounded-md border border-brand-ink/10 bg-brand-rice px-4 py-6">
                     {data.daily.length === 0 ? (
-                      <p className="text-sm text-brand-ink/60">No order data yet.</p>
+                      <p className="text-sm text-brand-ink/60">
+                        {t(dict, "admin.analytics.noOrderData")}
+                      </p>
                     ) : (
                       <OrderCountChart data={data.daily} />
                     )}

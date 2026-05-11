@@ -3,7 +3,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { jwtVerify } from "jose";
 import type { IncomingMessage } from "http";
 import { env } from "@/lib/env";
-import { redis } from "@/lib/queue/redis";
+import { getRedisClient, warnRedisUnavailable } from "@/lib/queue/redis";
 import { canSubscribe, type RealtimeUser } from "@/realtime/subscriptionManager";
 
 let io: Server | null = null;
@@ -24,9 +24,18 @@ export function createSocketServer(httpServer: import("http").Server) {
     }
   });
 
-  const pubClient = redis.duplicate();
-  const subClient = redis.duplicate();
-  io.adapter(createAdapter(pubClient, subClient));
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      const pubClient = redis.duplicate();
+      const subClient = redis.duplicate();
+      io.adapter(createAdapter(pubClient, subClient));
+    } catch (error) {
+      warnRedisUnavailable("Socket.io Redis adapter", error);
+    }
+  } else {
+    warnRedisUnavailable("Socket.io Redis adapter");
+  }
 
   io.use(async (socket, next) => {
     try {

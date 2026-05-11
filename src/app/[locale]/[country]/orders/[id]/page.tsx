@@ -1,11 +1,23 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import OrderTrackingPage, { type OrderTrackingData } from "@/features/orders/components/OrderTrackingPage";
+import { getDictionary, t } from "@/lib/i18n";
+
+export async function generateMetadata({ params }: { params: { locale: string; country: string; id: string } }) {
+  const meta = await import("@/lib/seo/metadata");
+  const dict = getDictionary(params.locale);
+  return meta.buildLocalizedMetadata({
+    params: { locale: params.locale, country: params.country },
+    title: `Order ${params.id} | Charme Restaurant`,
+    description: t(dict, "orders.tracking"),
+    pathname: `/${params.locale}/${params.country}/orders/${params.id}`
+  });
+}
 
 export default async function OrderTrackingRoute({
   params
 }: {
-  params: { id: string };
+  params: { locale: string; country: string; id: string };
 }) {
   const order = await prisma.order.findUnique({
     where: { id: params.id },
@@ -52,5 +64,5 @@ export default async function OrderTrackingRoute({
     }
   };
 
-  return <OrderTrackingPage order={payload} />;
+  return <OrderTrackingPage order={payload} dict={getDictionary(params.locale)} />;
 }

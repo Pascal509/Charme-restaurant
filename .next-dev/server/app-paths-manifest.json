@@ -1,0 +1,6 @@
+{
+  "/api/promotions/active/route": "app/api/promotions/active/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/cart/route": "app/api/cart/route.js",
+  "/[locale]/[country]/checkout/page": "app/[locale]/[country]/checkout/page.js"
+}

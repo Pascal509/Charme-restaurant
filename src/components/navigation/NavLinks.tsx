@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { getDictionary, t } from "@/lib/i18n";
 
 const links = [
-  { label: "Menu", href: "menu" },
-  { label: "Market", href: "market" },
-  { label: "Offers", href: "offers" },
-  { label: "Locations", href: "locations" },
-  { label: "About", href: "about" }
+  { key: "menu", href: "menu" },
+  { key: "market", href: "market" },
+  { key: "offers", href: "offers" },
+  { key: "locations", href: "locations" },
+  { key: "about", href: "about" }
 ];
 
 export default function NavLinks({
@@ -17,6 +18,8 @@ export default function NavLinks({
   country: string;
   onNavigate?: () => void;
 }) {
+  const dict = getDictionary(locale);
+
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
       {links.map((link) => (
@@ -26,7 +29,7 @@ export default function NavLinks({
           onClick={onNavigate}
           className="text-sm font-medium text-brand-ink/80 transition hover:text-brand-ink"
         >
-          {link.label}
+          {t(dict, `nav.${link.key}`)}
         </Link>
       ))}
     </div>

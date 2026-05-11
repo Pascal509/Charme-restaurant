@@ -17,7 +17,9 @@ export type MenuOptionGroup = {
 export type MenuItem = {
   id: string;
   name: string;
+  nameZh?: string;
   description?: string | null;
+  descriptionZh?: string | null;
   priceMinor: number;
   currency: string;
   imageUrl?: string | null;

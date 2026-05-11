@@ -9,6 +9,7 @@ type ParallaxImageSectionProps = {
   subtitle?: string;
   imageUrl: string;
   className?: string;
+  eyebrow?: string;
 };
 
 const blurData =
@@ -18,7 +19,8 @@ export default function ParallaxImageSection({
   title,
   subtitle,
   imageUrl,
-  className
+  className,
+  eyebrow
 }: ParallaxImageSectionProps) {
   const [offset, setOffset] = useState(0);
 
@@ -61,7 +63,7 @@ export default function ParallaxImageSection({
         />
       </div>
       <div className="relative z-10 px-8 py-20 text-center sm:px-12">
-        <p className="seal-badge mx-auto">Dining Experience</p>
+        <p className="seal-badge mx-auto">{eyebrow ?? ""}</p>
         <h2 className="mt-4 text-2xl text-brand-ink sm:text-3xl lg:text-4xl">
           {title}
         </h2>

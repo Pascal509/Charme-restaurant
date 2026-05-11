@@ -1,5 +1,7 @@
 "use client";
 
+import { useId, type KeyboardEvent } from "react";
+
 type StarRatingDisplayProps = {
   rating: number;
 };
@@ -26,8 +28,25 @@ export function StarRatingDisplay({ rating }: StarRatingDisplayProps) {
 }
 
 export function StarRatingInput({ value, onChange }: StarRatingInputProps) {
+  const groupId = useId();
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const nextValue = (() => {
+      if (event.key === "ArrowRight" || event.key === "ArrowUp") return Math.min(5, value + 1);
+      if (event.key === "ArrowLeft" || event.key === "ArrowDown") return Math.max(1, value - 1);
+      if (event.key === "Home") return 1;
+      if (event.key === "End") return 5;
+      return value;
+    })();
+
+    if (nextValue !== value) {
+      event.preventDefault();
+      onChange(nextValue);
+    }
+  }
+
   return (
-    <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating" onKeyDown={handleKeyDown}>
       {Array.from({ length: 5 }).map((_, index) => {
         const rating = index + 1;
         return (
@@ -35,13 +54,19 @@ export function StarRatingInput({ value, onChange }: StarRatingInputProps) {
             key={rating}
             type="button"
             onClick={() => onChange(rating)}
-            className="rounded p-1"
-            aria-label={`${rating} star`}
+            role="radio"
+            aria-checked={rating === value}
+            aria-label={`${rating} star${rating > 1 ? "s" : ""}`}
+            aria-describedby={`${groupId}-hint`}
+            className="rounded p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
           >
             <StarIcon filled={rating <= value} interactive />
           </button>
         );
       })}
+      <span id={`${groupId}-hint`} className="sr-only">
+        Use arrow keys to adjust the rating.
+      </span>
     </div>
   );
 }

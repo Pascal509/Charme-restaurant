@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { marketCatalog, menuCatalog } from "@/data/catalog";
+import { resolveMenuImage, resolveProductImage } from "@/lib/image-resolver";
 
 export type CatalogReadSource = "static" | "prisma";
 
@@ -8,7 +9,9 @@ export type CatalogMenuItem = {
   id: string;
   slug: string;
   name: string;
+  nameZh?: string;
   description?: string | null;
+  descriptionZh?: string | null;
   priceMinor: number;
   currency: string;
   imageUrl?: string | null;
@@ -22,7 +25,9 @@ export type CatalogMenuCategory = {
   id: string;
   slug: string;
   name: string;
+  nameZh?: string;
   description?: string | null;
+  descriptionZh?: string | null;
   displayOrder: number;
   isActive: boolean;
   items: CatalogMenuItem[];
@@ -41,7 +46,10 @@ export type CatalogMarketProduct = {
   id: string;
   slug: string;
   title: string;
+  titleZh?: string;
   description: string;
+  descriptionZh?: string;
+  imageUrl?: string | null;
   variant: CatalogMarketVariant;
 };
 
@@ -49,6 +57,7 @@ export type CatalogMarketCategory = {
   id: string;
   slug: string;
   name: string;
+  nameZh?: string;
   products: CatalogMarketProduct[];
 };
 
@@ -75,7 +84,9 @@ let fallbackReason: string | null = null;
 
 function enableStaticFallback(reason: string) {
   if (!fallbackActive) {
-    console.warn(`[CatalogService] Falling back to static catalog: ${reason}`);
+    if (process.env.SHOW_DEMO_LOGS === "1") {
+      console.warn(`[CatalogService] Falling back to static catalog: ${reason}`);
+    }
   }
   fallbackActive = true;
   fallbackReason = reason;
@@ -109,9 +120,13 @@ export function createCatalogService(source: CatalogReadSource = env.CATALOG_REA
         // simple connectivity check
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (prisma as any).$queryRaw`SELECT 1`;
-        console.info("[CatalogService] Prisma read source enabled and database reachable");
+        if (process.env.SHOW_DEMO_LOGS === "1") {
+          console.info("[CatalogService] Prisma read source enabled and database reachable");
+        }
       } catch (err) {
-        console.warn("[CatalogService] Prisma read source enabled but DB health check failed.", err);
+        if (process.env.SHOW_DEMO_LOGS === "1") {
+          console.warn("[CatalogService] Prisma read source enabled but DB health check failed.", err);
+        }
         enableStaticFallback("Prisma healthcheck failed");
       }
     })();
@@ -126,7 +141,9 @@ export function createCatalogService(source: CatalogReadSource = env.CATALOG_REA
 export function getStaticCatalogService() {
   if (!staticCatalogService) {
     staticCatalogService = new StaticCatalogService();
-    console.info("[CatalogService] Using StaticCatalogService (seeded catalog)");
+    if (process.env.SHOW_DEMO_LOGS === "1") {
+      console.info("[CatalogService] Using StaticCatalogService (seeded catalog)");
+    }
   }
 
   activeSource = "static";
@@ -137,7 +154,9 @@ export function getStaticCatalogService() {
 export function getPrismaCatalogService() {
   if (!prismaCatalogService) {
     prismaCatalogService = new PrismaCatalogService();
-    console.info("[CatalogService] Using PrismaCatalogService (DB-backed catalog)");
+    if (process.env.SHOW_DEMO_LOGS === "1") {
+      console.info("[CatalogService] Using PrismaCatalogService (DB-backed catalog)");
+    }
   }
 
   return prismaCatalogService;
@@ -156,12 +175,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function getStringField(obj: unknown, key: string): string | undefined {
+  if (!isRecord(obj)) return undefined;
+  const val = obj[key];
+  return typeof val === "string" ? val : undefined;
+}
+
 class StaticCatalogService implements CatalogService {
   private readonly menuCategories = menuCatalog.map((category, categoryIndex) => ({
     id: slugify(category.name),
     slug: slugify(category.name),
     name: category.name,
+    nameZh: getStringField(category, "nameZh") ?? getStringField(category, "name_zh") ?? undefined,
     description: category.description ?? null,
+    descriptionZh: getStringField(category, "descriptionZh") ?? getStringField(category, "description_zh") ?? undefined,
     displayOrder: categoryIndex + 1,
     isActive: true,
     items: category.items.map((item) => {
@@ -170,10 +197,12 @@ class StaticCatalogService implements CatalogService {
         id: slug,
         slug,
         name: item.title,
+        nameZh: getStringField(item, "titleZh") ?? getStringField(item, "title_zh") ?? undefined,
         description: item.description,
+        descriptionZh: getStringField(item, "descriptionZh") ?? getStringField(item, "description_zh") ?? undefined,
+        imageUrl: item.imageUrl ?? resolveMenuImage(item.title).src,
         priceMinor: item.baseAmountMinor,
         currency: "NGN",
-        imageUrl: null,
         isAvailable: true,
         preparationTime: null,
         averageRating: 0,
@@ -186,6 +215,7 @@ class StaticCatalogService implements CatalogService {
     id: slugify(category.name),
     slug: slugify(category.name),
     name: category.name,
+    nameZh: getStringField(category, "nameZh") ?? getStringField(category, "name_zh") ?? undefined,
     products: category.items.map((item) => {
       const slug = slugify(item.title);
       const sku = `${slug}-default`;
@@ -193,7 +223,10 @@ class StaticCatalogService implements CatalogService {
         id: slug,
         slug,
         title: item.title,
+        titleZh: getStringField(item, "titleZh") ?? getStringField(item, "title_zh") ?? undefined,
         description: item.description,
+        descriptionZh: getStringField(item, "descriptionZh") ?? getStringField(item, "description_zh") ?? undefined,
+        imageUrl: item.imageUrl ?? resolveProductImage(item.title).src,
         variant: {
           id: sku,
           sku,
@@ -244,17 +277,21 @@ class PrismaCatalogService implements CatalogService {
       id: category.id ?? slugify(category.name),
       slug: category.slug ?? slugify(category.name),
       name: category.name,
+      nameZh: getStringField(category, "nameZh") ?? getStringField(category, "name_zh") ?? undefined,
       description: category.description ?? null,
+      descriptionZh: getStringField(category, "descriptionZh") ?? getStringField(category, "description_zh") ?? undefined,
       displayOrder: category.displayOrder ?? idx + 1,
       isActive: Boolean(category.isActive),
       items: (category.items ?? []).map((entry: { menuItem?: { slug?: string; title?: string; description?: string | null; baseAmountMinor?: number; baseCurrency?: string; imageUrl?: string | null; isAvailable?: boolean; preparationTimeMins?: number | null } | null; title?: string }) => ({
         id: entry.menuItem?.slug ?? slugify(entry.menuItem?.title ?? entry.title ?? ""),
         slug: entry.menuItem?.slug ?? slugify(entry.menuItem?.title ?? entry.title ?? ""),
         name: entry.menuItem?.title ?? entry.title ?? "",
+        nameZh: getStringField(entry.menuItem, "titleZh") ?? getStringField(entry, "titleZh") ?? undefined,
         description: entry.menuItem?.description ?? null,
+        descriptionZh: getStringField(entry.menuItem, "descriptionZh") ?? getStringField(entry, "descriptionZh") ?? undefined,
+        imageUrl: entry.menuItem?.imageUrl ?? resolveMenuImage(entry.menuItem?.title ?? entry.title ?? "").src,
         priceMinor: entry.menuItem?.baseAmountMinor ?? entry.menuItem?.baseAmountMinor ?? 0,
         currency: entry.menuItem?.baseCurrency ?? "NGN",
-        imageUrl: entry.menuItem?.imageUrl ?? null,
         isAvailable: entry.menuItem?.isAvailable ?? true,
         preparationTime: entry.menuItem?.preparationTimeMins ?? null,
         averageRating: 0,
@@ -285,6 +322,7 @@ class PrismaCatalogService implements CatalogService {
       slug: productSlug ?? slugify(productTitle ?? productName ?? ""),
       title: productTitle ?? productName ?? "",
       description: productDescription ?? productTitle ?? "",
+      imageUrl: resolveProductImage(productTitle ?? productName ?? "").src,
       variant: {
         id: variantSku ?? variantId ?? "",
         sku: variantSku ?? variantId ?? "",
@@ -310,7 +348,9 @@ class PrismaCatalogService implements CatalogService {
       activeSource = "prisma";
       return result;
     } catch (err) {
-      console.warn(`[CatalogService] Prisma implementation error on ${label}.`, err);
+      if (process.env.SHOW_DEMO_LOGS === "1") {
+        console.warn(`[CatalogService] Prisma implementation error on ${label}.`, err);
+      }
       enableStaticFallback(`Prisma runtime failure on ${label}`);
       return fallback();
     }

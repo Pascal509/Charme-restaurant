@@ -1,5 +1,7 @@
+"use client";
+
 import Image from "next/image";
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type ImageWrapperProps = {
@@ -35,10 +37,11 @@ const ImageWrapper = forwardRef<HTMLDivElement, ImageWrapperProps>(function Imag
     showOverlay = true,
     blurDataURL,
     children,
-    fallbackLabel = "Image unavailable"
+    fallbackLabel = ""
   },
   ref
 ) {
+    const [hasError, setHasError] = useState(false);
   const aspectClass = (() => {
     if (aspect === "menu") return "aspect-[4/3]";
     if (aspect === "market" || aspect === "square") return "aspect-square";
@@ -55,13 +58,14 @@ const ImageWrapper = forwardRef<HTMLDivElement, ImageWrapperProps>(function Imag
         className
       )}
     >
-      {src ? (
+      {src && !hasError ? (
         <Image
           src={src}
           alt={alt}
           fill
           sizes={sizes}
           priority={priority}
+          unoptimized={src.startsWith("/")}
           className={cn(
             "object-cover object-center brightness-90 contrast-[1.05] saturate-[0.95]",
             objectPositionClassName,
@@ -69,6 +73,7 @@ const ImageWrapper = forwardRef<HTMLDivElement, ImageWrapperProps>(function Imag
           )}
           placeholder="blur"
           blurDataURL={blurDataURL ?? shimmerDataUrl}
+          onError={() => setHasError(true)}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-xs text-brand-ink/60">

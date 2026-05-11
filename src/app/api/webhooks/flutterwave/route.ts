@@ -12,27 +12,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const payload = await request.text();
-  const body = JSON.parse(payload) as {
-    event: string;
-    data: {
-      id: number;
-      tx_ref?: string;
+  try {
+    const payload = await request.text();
+    const body = JSON.parse(payload) as {
+      event?: string;
+      data?: {
+        id?: number;
+        tx_ref?: string;
+      };
     };
-  };
 
-  const result = await processFlutterwaveCallback({
-    transactionId: String(body.data.id),
-    reference: body.data.tx_ref ?? null,
-    payload
-  });
+    if (!body.data?.id) {
+      return NextResponse.json({ error: "Missing transaction id" }, { status: 400 });
+    }
 
-  log("info", "Flutterwave webhook processed", {
-    eventId: result.transactionId,
-    reference: result.reference,
-    status: result.status,
-    result: result.updateStatus
-  });
+    const result = await processFlutterwaveCallback({
+      transactionId: String(body.data.id),
+      reference: body.data.tx_ref ?? null,
+      payload
+    });
 
-  return NextResponse.json({ received: true });
+    log("info", "Flutterwave webhook processed", {
+      eventId: result.transactionId,
+      reference: result.reference,
+      status: result.status,
+      result: result.updateStatus
+    });
+
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    log("error", "Flutterwave webhook processing failed", {
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+    return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 });
+  }
 }

@@ -7,6 +7,7 @@ import NavLinks from "@/components/navigation/NavLinks";
 import LocaleCountrySwitcher from "@/components/navigation/LocaleCountrySwitcher";
 import NotificationCenter from "@/features/notifications/components/NotificationCenter";
 import CartIconLink from "@/components/navigation/CartIconLink";
+import { getDictionary, t } from "@/lib/i18n";
 
 export default function MobileNav({
   locale,
@@ -16,6 +17,7 @@ export default function MobileNav({
   country: string;
 }) {
   const { isMobileNavOpen, toggleMobileNav, closeMobileNav } = useUiStore();
+  const dict = getDictionary(locale);
 
   return (
     <div className="flex w-full items-center justify-between lg:hidden">
@@ -41,7 +43,7 @@ export default function MobileNav({
           aria-expanded={isMobileNavOpen}
           aria-controls="mobile-nav"
         >
-          Menu
+          {t(dict, "nav.menu")}
         </button>
       </div>
       {isMobileNavOpen ? (
@@ -55,15 +57,15 @@ export default function MobileNav({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">Explore</p>
+              <p className="text-sm font-semibold">{t(dict, "common.explore")}</p>
               <button className="btn btn-outline text-xs" onClick={closeMobileNav}>
-                Close
+                {t(dict, "common.close")}
               </button>
             </div>
             <div className="mt-6 space-y-6">
               <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-gold/70">
-                  Choose Experience
+                  {t(dict, "mobileNav.chooseExperience")}
                 </p>
                 <div className="mt-4 grid gap-2">
                   <Link
@@ -71,14 +73,14 @@ export default function MobileNav({
                     onClick={closeMobileNav}
                     className="rounded-full border border-brand-gold/30 px-4 py-2 text-sm font-semibold text-brand-gold transition hover:bg-brand-gold/10"
                   >
-                    Menu
+                    {t(dict, "nav.menu")}
                   </Link>
                   <Link
                     href={`/${locale}/${country}/market`}
                     onClick={closeMobileNav}
                     className="rounded-full border border-brand-gold/30 px-4 py-2 text-sm font-semibold text-brand-gold transition hover:bg-brand-gold/10"
                   >
-                    Market
+                    {t(dict, "nav.market")}
                   </Link>
                 </div>
               </div>

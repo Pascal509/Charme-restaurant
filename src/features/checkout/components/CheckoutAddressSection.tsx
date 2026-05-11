@@ -6,16 +6,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AddressForm from "@/features/addresses/components/AddressForm";
 import type { AddressInput, AddressRecord } from "@/features/addresses/types";
 import { useUserIdentity } from "@/hooks/useUserIdentity";
+import { getDictionary, t } from "@/lib/i18n";
 
 const GUEST_STORAGE_KEY = "guestAddresses";
 
 type CheckoutAddressSectionProps = {
+  locale: string;
   onSelectAddress: (addressId: string | null, requiresLogin: boolean) => void;
 };
 
-export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddressSectionProps) {
+export default function CheckoutAddressSection({ locale, onSelectAddress }: CheckoutAddressSectionProps) {
   const { status } = useSession();
-  const { userId, loading: identityLoading, error: identityError } = useUserIdentity();
+  const dict = getDictionary(locale);
+  const { userId, loading: identityLoading, error: identityError } = useUserIdentity(t(dict, "addressManager.identityError"));
   const queryClient = useQueryClient();
   const [guestAddresses, setGuestAddresses] = useState<AddressRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -31,8 +34,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
     queryFn: async () => {
       const response = await fetch(`/api/addresses?userId=${userId}`);
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load addresses");
+        throw new Error(t(dict, "checkout.unableToLoad"));
       }
       return response.json();
     }
@@ -73,7 +75,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
 
     if (isAuthenticated) {
       if (!userId) {
-        setActionError("User identity not ready");
+        setActionError(t(dict, "checkout.unableToLoad"));
         return;
       }
 
@@ -86,8 +88,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          setActionError(error.error || "Failed to update address");
+          setActionError(t(dict, "checkout.unableToLoad"));
           return;
         }
       } else {
@@ -98,8 +99,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          setActionError(error.error || "Failed to save address");
+          setActionError(t(dict, "checkout.unableToLoad"));
           return;
         }
       }
@@ -120,52 +120,59 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-brand-ink">Delivery address</h3>
+        <h3 className="text-sm font-semibold text-brand-ink">{t(dict, "checkout.deliveryAddress")}</h3>
         <button
+          type="button"
           onClick={() => {
             setEditing(null);
             setShowForm((prev) => !prev);
           }}
-          className="text-xs font-semibold text-brand-gold"
+          aria-expanded={showForm}
+          aria-controls="checkout-address-form"
+          className="text-xs font-semibold text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
         >
-          {showForm ? "Close" : "Add new"}
+          {showForm ? t(dict, "common.close") : t(dict, "checkout.addNew")}
         </button>
       </div>
 
       {identityError ? (
-        <div className="rounded-xl border border-brand-cinnabar/30 bg-brand-cinnabar/10 px-3 py-2 text-sm text-brand-cinnabar">
+        <div className="rounded-xl border border-brand-cinnabar/30 bg-brand-cinnabar/10 px-3 py-2 text-sm text-brand-cinnabar" role="alert">
           {identityError}
         </div>
       ) : null}
 
       {actionError ? (
-        <div className="rounded-xl border border-brand-cinnabar/30 bg-brand-cinnabar/10 px-3 py-2 text-sm text-brand-cinnabar">
+        <div className="rounded-xl border border-brand-cinnabar/30 bg-brand-cinnabar/10 px-3 py-2 text-sm text-brand-cinnabar" role="alert">
           {actionError}
         </div>
       ) : null}
 
       {!isAuthenticated ? (
-        <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3 text-sm text-brand-ink/70">
-          Sign in to validate delivery coverage and save addresses to your account.
+        <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3 text-sm text-brand-ink/70" role="status" aria-live="polite">
+          {t(dict, "checkout.signInAddresses")}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-2" role="status" aria-live="polite" aria-busy="true">
+          <span className="sr-only">Loading addresses</span>
           {Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="h-14 rounded-xl bg-brand-ink/10" />
+            <div key={index} className="h-14 rounded-xl bg-brand-ink/10" aria-hidden="true" />
           ))}
         </div>
       ) : addresses.length === 0 ? (
-        <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3 text-sm text-brand-ink/60">
-          Add a delivery address to continue.
+        <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3 text-sm text-brand-ink/60" role="status" aria-live="polite">
+          {t(dict, "checkout.addAddressToContinue")}
         </div>
       ) : (
-        <div className="space-y-3">
+        <fieldset className="space-y-3" aria-describedby="checkout-address-help">
+          <legend id="checkout-address-help" className="sr-only">
+            {t(dict, "checkout.deliveryAddress")}
+          </legend>
           {addresses.map((address) => (
             <label
               key={address.id}
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition ${
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition focus-within:ring-2 focus-within:ring-brand-gold/40 ${
                 selectedId === address.id
                   ? "border-brand-gold/60 bg-brand-gold/10 text-brand-ink"
                   : "border-brand-gold/10 bg-black/40 text-brand-ink"
@@ -179,7 +186,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
                   setSelectedId(address.id);
                   onSelectAddress(isAuthenticated ? address.id : null, !isAuthenticated);
                 }}
-                className="mt-1"
+                className="mt-1 h-4 w-4 accent-brand-gold"
               />
               <div>
                 <p className="font-semibold">{address.label}</p>
@@ -196,11 +203,11 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
               </div>
             </label>
           ))}
-        </div>
+        </fieldset>
       )}
 
       {showForm ? (
-        <div className="rounded-2xl border border-brand-gold/10 bg-black/40 p-4">
+        <div id="checkout-address-form" className="rounded-2xl border border-brand-gold/10 bg-black/40 p-4">
           <AddressForm
             initial={editing}
             onSubmit={handleSave}
@@ -209,6 +216,7 @@ export default function CheckoutAddressSection({ onSelectAddress }: CheckoutAddr
               setShowForm(false);
             }}
             requireGeo={isAuthenticated}
+            dict={dict}
           />
         </div>
       ) : null}

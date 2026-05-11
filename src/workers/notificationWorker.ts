@@ -1,5 +1,5 @@
 import { Worker, Job } from "bullmq";
-import { redis } from "@/lib/queue/redis";
+import { getRedisClient, warnRedisUnavailable } from "@/lib/queue/redis";
 import { prisma } from "@/lib/db";
 import { log } from "@/lib/logger";
 import type { NotificationJob, NotificationChannel } from "@/features/notifications/types";
@@ -14,6 +14,12 @@ const RATE_LIMITS: Record<NotificationChannel, number> = {
 };
 
 export function startNotificationWorker() {
+  const redis = getRedisClient();
+  if (!redis) {
+    warnRedisUnavailable("Notification worker startup");
+    return null;
+  }
+
   const worker = new Worker(
     "notifications",
     async (job: Job<NotificationJob>) => {
@@ -134,13 +140,31 @@ async function dispatch(job: NotificationJob) {
 }
 
 async function checkRateLimit(userId: string, channel: NotificationChannel) {
+  const redis = getRedisClient();
+  if (!redis) {
+    warnRedisUnavailable("Notification rate limiter");
+    return true;
+  }
+
   const now = new Date();
   const hourKey = `${now.getUTCFullYear()}${now.getUTCMonth() + 1}${now.getUTCDate()}${now.getUTCHours()}`;
   const key = `notif:rate:${userId}:${channel}:${hourKey}`;
-  const count = await redis.incr(key);
+
+  let count: number;
+  try {
+    count = await redis.incr(key);
+  } catch (error) {
+    warnRedisUnavailable("Notification rate limiter increment", error);
+    return true;
+  }
 
   if (count === 1) {
-    await redis.expire(key, 60 * 60);
+    try {
+      await redis.expire(key, 60 * 60);
+    } catch (error) {
+      warnRedisUnavailable("Notification rate limiter ttl", error);
+      return true;
+    }
   }
 
   return count <= RATE_LIMITS[channel];

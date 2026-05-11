@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationResult } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
+import { getDictionary, t, type DictionaryType } from "@/lib/i18n";
 
 const ADMIN_ORDERS_ENDPOINT = "/api/admin/orders";
 const ADMIN_METRICS_ENDPOINT = "/api/admin/metrics";
@@ -102,7 +103,8 @@ const EMPTY_FORM: MenuFormState = {
   isAvailable: true
 };
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage({ locale }: { locale: string }) {
+  const dict = getDictionary(locale);
   const queryClient = useQueryClient();
   const [socketStatus, setSocketStatus] = useState("connecting");
   const [createForm, setCreateForm] = useState<MenuFormState>(EMPTY_FORM);
@@ -117,7 +119,7 @@ export default function AdminDashboardPage() {
       const response = await fetch(ADMIN_ORDERS_ENDPOINT, { cache: "no-store" });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to load orders");
+        throw new Error(payload.error || t(dict, "admin.dashboard.ordersError"));
       }
       return response.json();
     },
@@ -132,7 +134,7 @@ export default function AdminDashboardPage() {
       const response = await fetch(ADMIN_METRICS_ENDPOINT, { cache: "no-store" });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to load metrics");
+        throw new Error(payload.error || t(dict, "admin.dashboard.metricsError"));
       }
       return response.json();
     },
@@ -147,7 +149,7 @@ export default function AdminDashboardPage() {
       const response = await fetch(ADMIN_MENU_ENDPOINT, { cache: "no-store" });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to load menu");
+        throw new Error(payload.error || t(dict, "admin.dashboard.menuError"));
       }
       return response.json();
     },
@@ -228,7 +230,7 @@ export default function AdminDashboardPage() {
 
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(body.error || "Failed to update order");
+        throw new Error(body.error || t(dict, "admin.dashboard.updateError"));
       }
       return body;
     },
@@ -257,18 +259,18 @@ export default function AdminDashboardPage() {
 
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(body.error || "Failed to create item");
+        throw new Error(body.error || t(dict, "admin.dashboard.createError"));
       }
       return body;
     },
     onSuccess: () => {
       setCreateForm(EMPTY_FORM);
-      setMenuMessage("Item created.");
+      setMenuMessage(t(dict, "admin.dashboard.menuCreated"));
       setMenuError(null);
       queryClient.invalidateQueries({ queryKey: ["admin-menu"] });
     },
     onError: (error) => {
-      setMenuError(error instanceof Error ? error.message : "Failed to create item");
+      setMenuError(error instanceof Error ? error.message : t(dict, "admin.dashboard.createError"));
       setMenuMessage(null);
     }
   });
@@ -294,18 +296,18 @@ export default function AdminDashboardPage() {
 
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(body.error || "Failed to update item");
+        throw new Error(body.error || t(dict, "admin.dashboard.updateError"));
       }
       return body;
     },
     onSuccess: () => {
       setEditItemId(null);
-      setMenuMessage("Item updated.");
+      setMenuMessage(t(dict, "admin.dashboard.menuUpdated"));
       setMenuError(null);
       queryClient.invalidateQueries({ queryKey: ["admin-menu"] });
     },
     onError: (error) => {
-      setMenuError(error instanceof Error ? error.message : "Failed to update item");
+      setMenuError(error instanceof Error ? error.message : t(dict, "admin.dashboard.updateError"));
       setMenuMessage(null);
     }
   });
@@ -353,18 +355,14 @@ export default function AdminDashboardPage() {
     <main className="bg-brand-rice">
       <Container className="py-10">
         <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Admin</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">{t(dict, "admin.dashboard.eyebrow")}</p>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">
-                Restaurant operations
-              </h1>
-              <p className="mt-2 text-sm text-brand-ink/70">
-                Monitor live orders, update statuses, and maintain the menu.
-              </p>
+              <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">{t(dict, "admin.dashboard.title")}</h1>
+              <p className="mt-2 text-sm text-brand-ink/70">{t(dict, "admin.dashboard.subtitle")}</p>
             </div>
             <div className="rounded-full border border-brand-ink/10 bg-white px-3 py-1 text-xs text-brand-ink/60">
-              Live updates: {socketStatus}
+              {t(dict, "admin.dashboard.liveUpdates")}: {t(dict, `admin.dashboard.${socketStatus}`)}
             </div>
           </div>
         </div>
@@ -376,24 +374,24 @@ export default function AdminDashboardPage() {
             <div className="space-y-6">
               <div className="rounded-lg border border-brand-ink/10 bg-white p-5 shadow-soft">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-brand-ink">Live orders</h2>
-                  <span className="text-xs text-brand-ink/60">{liveOrders.length} active</span>
+                  <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "admin.dashboard.liveOrders")}</h2>
+                  <span className="text-xs text-brand-ink/60">{liveOrders.length} {t(dict, "admin.dashboard.active")}</span>
                 </div>
                 {ordersQuery.isLoading ? (
-                  <p className="mt-4 text-sm text-brand-ink/60">Loading orders...</p>
+                  <p className="mt-4 text-sm text-brand-ink/60">{t(dict, "admin.dashboard.loadingOrders")}</p>
                 ) : ordersQuery.isError ? (
-                  <p className="mt-4 text-sm text-brand-cinnabar">Failed to load orders.</p>
+                  <p className="mt-4 text-sm text-brand-cinnabar">{t(dict, "admin.dashboard.ordersError")}</p>
                 ) : liveOrders.length === 0 ? (
-                  <p className="mt-4 text-sm text-brand-ink/60">No active orders.</p>
+                  <p className="mt-4 text-sm text-brand-ink/60">{t(dict, "admin.dashboard.noActiveOrders")}</p>
                 ) : (
                   <div className="mt-4 space-y-4">
                     {liveOrders.map((order) => (
                       <div key={order.id} className="rounded-md border border-brand-ink/10 p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-brand-ink">Order {order.id}</p>
+                            <p className="text-sm font-semibold text-brand-ink">{t(dict, "admin.dashboard.orderPrefix")} {order.id}</p>
                             <p className="text-xs text-brand-ink/60">
-                              {order.user?.name || order.user?.email || "Guest"} ·
+                              {order.user?.name || order.user?.email || t(dict, "admin.dashboard.guestFallback")} ·
                               {` ${formatDateTime(order.createdAt)}`}
                             </p>
                           </div>
@@ -404,8 +402,8 @@ export default function AdminDashboardPage() {
                         <div className="mt-3 text-xs text-brand-ink/60">
                           {order.items.map((item) => (
                             <div key={item.id} className="flex items-center justify-between">
-                              <span>
-                                {item.quantity}x {item.menuItem?.title || "Item"}
+                                <span>
+                                {item.quantity}x {item.menuItem?.title || t(dict, "admin.dashboard.itemFallback")}
                               </span>
                               <span>
                                 {formatCurrency(
@@ -421,7 +419,7 @@ export default function AdminDashboardPage() {
                             {formatCurrency(order.totalAmountMinor, order.displayCurrency)}
                           </span>
                           <div className="flex flex-wrap gap-2">
-                            {renderOrderActions(order, statusMutation)}
+                            {renderOrderActions(order, statusMutation, dict)}
                           </div>
                         </div>
                       </div>
@@ -433,25 +431,21 @@ export default function AdminDashboardPage() {
 
             <div className="space-y-6">
               <div className="rounded-lg border border-brand-ink/10 bg-white p-5 shadow-soft">
-                <h2 className="text-lg font-semibold text-brand-ink">Today</h2>
+                <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "admin.dashboard.today")}</h2>
                 {metricsQuery.isLoading ? (
-                  <p className="mt-4 text-sm text-brand-ink/60">Loading metrics...</p>
+                  <p className="mt-4 text-sm text-brand-ink/60">{t(dict, "admin.dashboard.loadingMetrics")}</p>
                 ) : metricsQuery.isError ? (
-                  <p className="mt-4 text-sm text-brand-cinnabar">Failed to load metrics.</p>
+                  <p className="mt-4 text-sm text-brand-cinnabar">{t(dict, "admin.dashboard.metricsError")}</p>
                 ) : metrics ? (
                   <div className="mt-4 grid gap-4">
                     <div className="rounded-md border border-brand-ink/10 bg-brand-rice px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">
-                        Orders
-                      </p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">{t(dict, "admin.dashboard.orders")}</p>
                       <p className="mt-2 text-2xl font-semibold text-brand-ink">
                         {metrics.todayOrderCount}
                       </p>
                     </div>
                     <div className="rounded-md border border-brand-ink/10 bg-brand-rice px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">
-                        Revenue
-                      </p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-brand-ink/50">{t(dict, "admin.dashboard.revenue")}</p>
                       <p className="mt-2 text-2xl font-semibold text-brand-ink">
                         {formatCurrency(metrics.todayRevenueMinor, metrics.currency)}
                       </p>
@@ -461,19 +455,17 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="rounded-lg border border-brand-ink/10 bg-white p-5 shadow-soft">
-                <h2 className="text-lg font-semibold text-brand-ink">Menu management</h2>
+                <h2 className="text-lg font-semibold text-brand-ink">{t(dict, "admin.dashboard.menuManagement")}</h2>
                 <div className="mt-4 space-y-4">
                   <div className="rounded-md border border-brand-ink/10 bg-brand-rice p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">
-                      Create item
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/60">{t(dict, "admin.dashboard.createItem")}</p>
                     <div className="mt-3 grid gap-3">
                       <input
                         value={createForm.name}
                         onChange={(event) =>
                           setCreateForm((prev) => ({ ...prev, name: event.target.value }))
                         }
-                        placeholder="Item name"
+                        placeholder={t(dict, "admin.dashboard.itemNamePlaceholder")}
                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                       />
                       <textarea
@@ -481,7 +473,7 @@ export default function AdminDashboardPage() {
                         onChange={(event) =>
                           setCreateForm((prev) => ({ ...prev, description: event.target.value }))
                         }
-                        placeholder="Description"
+                        placeholder={t(dict, "admin.dashboard.descriptionPlaceholder")}
                         rows={2}
                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                       />
@@ -491,7 +483,7 @@ export default function AdminDashboardPage() {
                           onChange={(event) =>
                             setCreateForm((prev) => ({ ...prev, price: event.target.value }))
                           }
-                          placeholder="Price"
+                          placeholder={t(dict, "admin.dashboard.pricePlaceholder")}
                           className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                         />
                         <input
@@ -499,7 +491,7 @@ export default function AdminDashboardPage() {
                           onChange={(event) =>
                             setCreateForm((prev) => ({ ...prev, currency: event.target.value }))
                           }
-                          placeholder="Currency"
+                          placeholder={t(dict, "admin.dashboard.currencyPlaceholder")}
                           className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                         />
                       </div>
@@ -509,7 +501,7 @@ export default function AdminDashboardPage() {
                           onChange={(event) =>
                             setCreateForm((prev) => ({ ...prev, preparationTime: event.target.value }))
                           }
-                          placeholder="Prep time (mins)"
+                          placeholder={t(dict, "admin.dashboard.prepTimePlaceholder")}
                           className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                         />
                         <select
@@ -519,7 +511,7 @@ export default function AdminDashboardPage() {
                           }
                           className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                         >
-                          <option value="">Select category</option>
+                          <option value="">{t(dict, "admin.dashboard.categoryPlaceholder")}</option>
                           {categoriesQuery.data?.categories.map((category) => (
                             <option key={category.id} value={category.id}>
                               {category.name}
@@ -532,7 +524,7 @@ export default function AdminDashboardPage() {
                         onChange={(event) =>
                           setCreateForm((prev) => ({ ...prev, imageUrl: event.target.value }))
                         }
-                        placeholder="Image URL"
+                        placeholder={t(dict, "admin.dashboard.imageUrlPlaceholder")}
                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                       />
                       <label className="flex items-center gap-2 text-xs text-brand-ink/70">
@@ -543,7 +535,7 @@ export default function AdminDashboardPage() {
                             setCreateForm((prev) => ({ ...prev, isAvailable: event.target.checked }))
                           }
                         />
-                        Available
+                        {t(dict, "admin.dashboard.available")}
                       </label>
                       <button
                         onClick={() => createMutation.mutate(createForm)}
@@ -555,7 +547,7 @@ export default function AdminDashboardPage() {
                         }
                         className="rounded-md bg-brand-ink px-4 py-2 text-xs font-semibold text-white disabled:bg-brand-ink/30"
                       >
-                        {createMutation.isPending ? "Creating..." : "Create item"}
+                        {createMutation.isPending ? t(dict, "admin.dashboard.creating") : t(dict, "admin.dashboard.create")}
                       </button>
                       {menuMessage ? (
                         <p className="text-xs text-emerald-700">{menuMessage}</p>
@@ -567,10 +559,10 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {menuQuery.isLoading ? (
-                      <p className="text-sm text-brand-ink/60">Loading menu...</p>
+                      {menuQuery.isLoading ? (
+                      <p className="text-sm text-brand-ink/60">{t(dict, "admin.dashboard.loadingMenu")}</p>
                     ) : menuQuery.isError ? (
-                      <p className="text-sm text-brand-cinnabar">Failed to load menu.</p>
+                      <p className="text-sm text-brand-cinnabar">{t(dict, "admin.dashboard.menuError")}</p>
                     ) : (
                       categories.map((category) => (
                         <div key={category.id} className="rounded-md border border-brand-ink/10 p-4">
@@ -578,9 +570,7 @@ export default function AdminDashboardPage() {
                             <h3 className="text-sm font-semibold text-brand-ink">
                               {category.name}
                             </h3>
-                            <span className="text-xs text-brand-ink/50">
-                              {category.items.length} items
-                            </span>
+                            <span className="text-xs text-brand-ink/50">{category.items.length} {t(dict, "admin.dashboard.itemsSuffix")}</span>
                           </div>
                           <div className="mt-3 space-y-3">
                             {category.items.map((item) => (
@@ -602,13 +592,13 @@ export default function AdminDashboardPage() {
                                       onClick={() => handleAvailabilityToggle(item)}
                                       className="rounded-full border border-brand-ink/10 px-3 py-1 text-xs text-brand-ink/70"
                                     >
-                                      {item.isAvailable ? "Disable" : "Enable"}
+                                      {item.isAvailable ? t(dict, "admin.dashboard.disable") : t(dict, "admin.dashboard.enable")}
                                     </button>
                                     <button
                                       onClick={() => handleEdit(item)}
                                       className="rounded-full border border-brand-ink/10 px-3 py-1 text-xs text-brand-ink/70"
                                     >
-                                      Edit
+                                      {t(dict, "admin.dashboard.edit")}
                                     </button>
                                   </div>
                                 </div>
@@ -623,7 +613,7 @@ export default function AdminDashboardPage() {
                                           name: event.target.value
                                         }))
                                       }
-                                      placeholder="Item name"
+                                      placeholder={t(dict, "admin.dashboard.itemNamePlaceholder")}
                                       className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                     />
                                     <textarea
@@ -634,7 +624,7 @@ export default function AdminDashboardPage() {
                                           description: event.target.value
                                         }))
                                       }
-                                      placeholder="Description"
+                                      placeholder={t(dict, "admin.dashboard.descriptionPlaceholder")}
                                       rows={2}
                                       className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                     />
@@ -647,7 +637,7 @@ export default function AdminDashboardPage() {
                                             price: event.target.value
                                           }))
                                         }
-                                        placeholder="Price"
+                                        placeholder={t(dict, "admin.dashboard.pricePlaceholder")}
                                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                       />
                                       <input
@@ -658,7 +648,7 @@ export default function AdminDashboardPage() {
                                             currency: event.target.value
                                           }))
                                         }
-                                        placeholder="Currency"
+                                        placeholder={t(dict, "admin.dashboard.currencyPlaceholder")}
                                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                       />
                                     </div>
@@ -671,7 +661,7 @@ export default function AdminDashboardPage() {
                                             preparationTime: event.target.value
                                           }))
                                         }
-                                        placeholder="Prep time (mins)"
+                                        placeholder={t(dict, "admin.dashboard.prepTimePlaceholder")}
                                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                       />
                                       <select
@@ -684,7 +674,7 @@ export default function AdminDashboardPage() {
                                         }
                                         className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                       >
-                                        <option value="">Select category</option>
+                                        <option value="">{t(dict, "admin.dashboard.categoryPlaceholder")}</option>
                                         {categoriesQuery.data?.categories.map((categoryOption) => (
                                           <option key={categoryOption.id} value={categoryOption.id}>
                                             {categoryOption.name}
@@ -700,7 +690,7 @@ export default function AdminDashboardPage() {
                                           imageUrl: event.target.value
                                         }))
                                       }
-                                      placeholder="Image URL"
+                                      placeholder={t(dict, "admin.dashboard.imageUrlPlaceholder")}
                                       className="w-full rounded-md border border-brand-ink/10 px-3 py-2 text-sm"
                                     />
                                     <label className="flex items-center gap-2 text-xs text-brand-ink/70">
@@ -714,7 +704,7 @@ export default function AdminDashboardPage() {
                                           }))
                                         }
                                       />
-                                      Available
+                                      {t(dict, "admin.dashboard.available")}
                                     </label>
                                     <div className="flex items-center gap-2">
                                       <button
@@ -724,13 +714,13 @@ export default function AdminDashboardPage() {
                                         disabled={updateMutation.isPending}
                                         className="rounded-md bg-brand-ink px-4 py-2 text-xs font-semibold text-white disabled:bg-brand-ink/30"
                                       >
-                                        {updateMutation.isPending ? "Saving..." : "Save"}
+                                        {updateMutation.isPending ? t(dict, "admin.dashboard.saving") : t(dict, "admin.dashboard.save")}
                                       </button>
                                       <button
                                         onClick={() => setEditItemId(null)}
                                         className="rounded-md border border-brand-ink/10 px-4 py-2 text-xs"
                                       >
-                                        Cancel
+                                        {t(dict, "admin.dashboard.cancel")}
                                       </button>
                                     </div>
                                   </div>
@@ -752,31 +742,28 @@ export default function AdminDashboardPage() {
   );
 }
 
-function renderOrderActions(order: AdminOrder, mutation: OrderStatusMutation) {
-  const buttons: Array<{ label: string; action: string; visible: boolean }> = [
-    { label: "Accept", action: "accept", visible: order.status === "PENDING" },
-    { label: "Start prep", action: "start-prep", visible: order.status === "ACCEPTED" },
-    { label: "Ready", action: "ready", visible: order.status === "PREPARING" },
-    {
-      label: "Delivered",
-      action: "delivered",
-      visible: ["READY", "OUT_FOR_DELIVERY"].includes(order.status)
-    }
-  ];
 
-  return buttons
-    .filter((button) => button.visible)
-    .map((button) => (
-      <button
-        key={button.action}
-        onClick={() => mutation.mutate({ orderId: order.id, action: button.action })}
-        disabled={mutation.isPending}
-        className="rounded-md border border-brand-ink/10 px-3 py-1 text-xs font-semibold text-brand-ink"
-      >
-        {mutation.isPending ? "Updating" : button.label}
-      </button>
-    ));
-}
+  function renderOrderActions(order: AdminOrder, mutation: OrderStatusMutation, dict: DictionaryType) {
+    const buttons: Array<{ labelKey: string; action: string; visible: boolean }> = [
+      { labelKey: "accept", action: "accept", visible: order.status === "PENDING" },
+      { labelKey: "startPrep", action: "start-prep", visible: order.status === "ACCEPTED" },
+      { labelKey: "ready", action: "ready", visible: order.status === "PREPARING" },
+      { labelKey: "outForDelivery", action: "out-for-delivery", visible: order.status === "READY" },
+      { labelKey: "delivered", action: "delivered", visible: order.status === "OUT_FOR_DELIVERY" },
+      { labelKey: "cancel", action: "cancel", visible: order.status !== "CANCELLED" && order.status !== "DELIVERED" }
+    ];
+
+    return buttons.filter((b) => b.visible).map((button) => (
+        <button
+          key={button.action}
+          onClick={() => mutation.mutate({ orderId: order.id, action: button.action })}
+          disabled={mutation.isPending}
+          className="rounded-md border border-brand-ink/10 px-3 py-1 text-xs font-semibold text-brand-ink"
+        >
+          {mutation.isPending ? t(dict, "admin.updating") : t(dict, `admin.action.${button.labelKey}`)}
+        </button>
+      ));
+  }
 
 function formatCurrency(amountMinor: number, currency: string) {
   const formatter = new Intl.NumberFormat("en-NG", {

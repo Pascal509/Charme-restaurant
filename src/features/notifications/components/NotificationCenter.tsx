@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import { getDictionary, normalizeLocale, t } from "@/lib/i18n";
 
 const NOTIFICATIONS_ENDPOINT = "/api/notifications";
 const PREFERENCES_ENDPOINT = "/api/notification-preferences";
@@ -46,6 +48,8 @@ type PreferenceResponse = {
 };
 
 export default function NotificationCenter() {
+  const params = useParams<{ locale?: string }>();
+  const dict = getDictionary(normalizeLocale(params?.locale));
   const { status } = useSession();
   const [open, setOpen] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -58,7 +62,7 @@ export default function NotificationCenter() {
       const response = await fetch(`${NOTIFICATIONS_ENDPOINT}?limit=20`);
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load notifications");
+        throw new Error(error.error || t(dict, "notifications.loadError"));
       }
       return response.json();
     },
@@ -73,7 +77,7 @@ export default function NotificationCenter() {
       const response = await fetch(PREFERENCES_ENDPOINT);
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load preferences");
+        throw new Error(error.error || t(dict, "notifications.loadError"));
       }
       return response.json();
     }
@@ -137,7 +141,7 @@ export default function NotificationCenter() {
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <span className="sr-only">Notifications</span>
+        <span className="sr-only">{t(dict, "notifications.title")}</span>
         <span role="img" aria-hidden="true">
           🔔
         </span>
@@ -151,9 +155,9 @@ export default function NotificationCenter() {
       {open ? (
         <div className="absolute right-0 mt-3 w-[320px] origin-top-right rounded-xl border border-brand-ink/10 bg-white p-4 shadow-crisp transition duration-200 ease-out">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-brand-ink">Notifications</p>
+            <p className="text-sm font-semibold text-brand-ink">{t(dict, "notifications.title")}</p>
             <button onClick={markAllRead} className="text-xs font-semibold text-brand-ink/70">
-              Mark all read
+              {t(dict, "notifications.markAllRead")}
             </button>
           </div>
 
@@ -165,11 +169,11 @@ export default function NotificationCenter() {
             </div>
           ) : notificationsQuery.isError ? (
             <div className="mt-4 rounded-md border border-brand-cinnabar/30 bg-brand-cinnabar/5 px-3 py-2 text-sm text-brand-cinnabar">
-              Unable to load notifications.
+              {t(dict, "notifications.loadError")}
             </div>
           ) : notifications.length === 0 ? (
             <div className="mt-4 rounded-md border border-brand-ink/10 bg-brand-ink/5 px-3 py-3 text-sm text-brand-ink/60">
-              No notifications yet.
+              {t(dict, "notifications.empty")}
             </div>
           ) : (
             <div className="mt-4 space-y-3">
@@ -184,11 +188,11 @@ export default function NotificationCenter() {
                   }`}
                 >
                   <span className="text-[10px] uppercase tracking-[0.2em] text-brand-ink/50">
-                    {formatType(item.type)}
+                    {formatType(item.type, dict)}
                   </span>
-                  <span className="text-sm font-semibold">{item.payload?.title || "Update"}</span>
+                    <span className="text-sm font-semibold">{item.payload?.title || t(dict, "notifications.update")}</span>
                   <span className="text-xs text-brand-ink/60">
-                    {item.payload?.message || "New activity"}
+                    {item.payload?.message || t(dict, "notifications.newActivity")}
                   </span>
                   <span className="text-[10px] text-brand-ink/40">
                     {formatTime(item.createdAt)}
@@ -199,9 +203,7 @@ export default function NotificationCenter() {
           )}
 
           <div className="mt-6 border-t border-brand-ink/10 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/50">
-              Preferences
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink/50">{t(dict, "notifications.preferences")}</p>
             {preferencesQuery.isLoading ? (
               <div className="mt-3 space-y-2">
                 {Array.from({ length: 3 }).map((_, index) => (
@@ -212,7 +214,7 @@ export default function NotificationCenter() {
               <div className="mt-3 space-y-3">
                 {TYPES.map((type) => (
                   <div key={type} className="rounded-lg border border-brand-ink/10 px-3 py-2">
-                    <p className="text-xs font-semibold text-brand-ink">{formatType(type)}</p>
+                    <p className="text-xs font-semibold text-brand-ink">{formatType(type, dict)}</p>
                     <div className="mt-2 flex flex-wrap gap-3">
                       {CHANNELS.map((channel) => {
                         const key = `${type}:${channel}`;
@@ -225,7 +227,7 @@ export default function NotificationCenter() {
                               onChange={() => togglePreference(type, channel)}
                               disabled={updating === key}
                             />
-                            {channel}
+                            {t(dict, channel.toLowerCase())}
                           </label>
                         );
                       })}
@@ -241,8 +243,16 @@ export default function NotificationCenter() {
   );
 }
 
-function formatType(type: NotificationType) {
-  return type.replace(/_/g, " ").toLowerCase();
+function formatType(type: NotificationType, dict: ReturnType<typeof getDictionary>) {
+  const map: Record<NotificationType, string> = {
+    ORDER_CONFIRMED: "orderConfirmed",
+    ORDER_PREPARING: "orderPreparing",
+    ORDER_READY: "orderReady",
+    ORDER_OUT_FOR_DELIVERY: "orderOutForDelivery",
+    ORDER_DELIVERED: "orderDelivered",
+    PAYMENT_FAILED: "paymentFailed"
+  };
+  return t(dict, `notifications.${map[type]}`);
 }
 
 function formatTime(value: string) {

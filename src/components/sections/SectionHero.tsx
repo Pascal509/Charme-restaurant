@@ -5,7 +5,7 @@ type SectionHeroProps = {
   eyebrow: string;
   title: string;
   subtitle?: string;
-  imageUrl: string;
+  imageUrl?: string;
   className?: string;
   children?: React.ReactNode;
 };
@@ -28,14 +28,16 @@ export default function SectionHero({
         className
       )}
     >
-      <ImageWrapper
-        src={imageUrl}
-        alt={title}
-        sizes="(max-width: 768px) 100vw, 1200px"
-        blurDataURL={blurData}
-        className="absolute inset-0 h-full w-full"
-        imageClassName="image-zoom image-focus"
-      />
+      {imageUrl && (
+        <ImageWrapper
+          src={imageUrl}
+          alt={title}
+          sizes="(max-width: 768px) 100vw, 1200px"
+          blurDataURL={blurData}
+          className="absolute inset-0 h-full w-full"
+          imageClassName="image-zoom image-focus"
+        />
+      )}
       <div className="relative z-10 px-6 py-10 sm:px-10 sm:py-12">
         <p className="seal-badge">{eyebrow}</p>
         <h1 className="mt-3 font-display text-3xl text-brand-ink sm:text-4xl lg:text-5xl">

@@ -18,6 +18,13 @@
   --font-cjk: "Noto Sans SC";
 }
 
+/* Use CJK-optimized font when document language is Chinese (zh-CN) */
+:lang(zh-CN), :lang(zh) {
+  font-family: var(--font-cjk), var(--font-body), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 * {
   box-sizing: border-box;
 }

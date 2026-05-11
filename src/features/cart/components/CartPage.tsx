@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
 import ImageWrapper from "@/components/ui/ImageWrapper";
 import { useCartStore } from "@/store/useCartStore";
+import { getDictionary, t } from "@/lib/i18n";
+import { resolveMenuImage, resolveProductImage } from "@/lib/image-resolver";
 
 const CART_ENDPOINT = "/api/cart";
 const CART_ITEM_ENDPOINT = "/api/cart/item";
@@ -24,6 +26,10 @@ type CartItem = {
     description?: string | null;
     imageUrl?: string | null;
     isAvailable?: boolean | null;
+  } | null;
+  productVariant?: {
+    title?: string | null;
+    imageUrl?: string | null;
   } | null;
 };
 
@@ -67,7 +73,7 @@ type CouponApplyResponse = {
   currency?: string;
 };
 
-export default function CartPage() {
+export default function CartPage({ locale }: { locale: string }) {
   const [guestId, setGuestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -76,6 +82,7 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const { setItemCount } = useCartStore();
   const queryClient = useQueryClient();
+  const dict = getDictionary(locale);
 
   useEffect(() => {
     const id = resolveGuestId();
@@ -101,7 +108,7 @@ export default function CartPage() {
       const response = await fetch(`${CART_ENDPOINT}?guestId=${guestId}`);
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to load cart");
+        throw new Error(error.error || t(dict, "cart.error"));
       }
       return response.json();
     },
@@ -125,7 +132,7 @@ export default function CartPage() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to update item");
+        throw new Error(error.error || t(dict, "messages.failedUpdateQuantity"));
       }
 
       return response.json();
@@ -164,7 +171,7 @@ export default function CartPage() {
       if (context?.previous) {
         queryClient.setQueryData(["cart", guestId], context.previous);
       }
-      setErrorMessage(error instanceof Error ? error.message : "Failed to update item");
+      setErrorMessage(error instanceof Error ? error.message : t(dict, "messages.failedUpdateQuantity"));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["cart", guestId] });
@@ -179,7 +186,7 @@ export default function CartPage() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to remove item");
+        throw new Error(error.error || t(dict, "messages.failedRemoveItem"));
       }
 
       return response.json();
@@ -208,7 +215,7 @@ export default function CartPage() {
       if (context?.previous) {
         queryClient.setQueryData(["cart", guestId], context.previous);
       }
-      setErrorMessage(error instanceof Error ? error.message : "Failed to remove item");
+      setErrorMessage(error instanceof Error ? error.message : t(dict, "messages.failedRemoveItem"));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["cart", guestId] });
@@ -217,7 +224,7 @@ export default function CartPage() {
 
   const applyCouponMutation = useMutation({
     mutationFn: async () => {
-      if (!guestId) throw new Error("Missing guest id");
+      if (!guestId) throw new Error(t(dict, "messages.noGuestId"));
       const response = await fetch("/api/coupons/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -226,7 +233,7 @@ export default function CartPage() {
 
       const payload = (await response.json().catch(() => ({}))) as CouponApplyResponse;
       if (!response.ok || payload.error || payload.success === false || payload.valid === false) {
-        throw new Error(payload.error || payload.message || "Invalid coupon code");
+        throw new Error(payload.error || payload.message || t(dict, "cart.invalidCoupon"));
       }
 
       return payload;
@@ -234,11 +241,11 @@ export default function CartPage() {
     onSuccess: (payload) => {
       const totals = resolveCouponTotals(payload, cartQuery.data?.cart);
       setCouponTotals(totals);
-      setCouponMessage(payload.message || "Coupon applied.");
+      setCouponMessage(payload.message || t(dict, "cart.couponApplied"));
       setCouponError(null);
     },
     onError: (error) => {
-      setCouponError(error instanceof Error ? error.message : "Failed to apply coupon");
+      setCouponError(error instanceof Error ? error.message : t(dict, "messages.failedApplyCoupon"));
       setCouponMessage(null);
       setCouponTotals(null);
     }
@@ -263,11 +270,9 @@ export default function CartPage() {
     <main className="bg-brand-rice">
       <Container className="py-10">
         <div className="flex flex-col gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">Your cart</p>
-          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">Finalize your order</h1>
-          <p className="max-w-2xl text-sm text-brand-ink/70">
-            Review items, adjust quantities, and proceed when you are ready.
-          </p>
+          <p className="text-xs uppercase tracking-[0.3em] text-brand-ink/60">{t(dict, "cart.header")}</p>
+          <h1 className="font-display text-3xl text-brand-ink sm:text-4xl">{t(dict, "cart.title")}</h1>
+          <p className="max-w-2xl text-sm text-brand-ink/70">{t(dict, "cart.subtitle")}</p>
         </div>
       </Container>
 
@@ -277,10 +282,10 @@ export default function CartPage() {
             <CartSkeleton />
           ) : cartQuery.isError ? (
             <div className="rounded-lg border border-brand-ink/10 bg-white p-6 text-sm text-brand-ink/70">
-              Unable to load cart. Please try again.
+              {t(dict, "cart.error")}
             </div>
           ) : empty ? (
-            <EmptyState />
+            <EmptyState dict={dict} />
           ) : (
             <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
               <div className="space-y-6">
@@ -292,9 +297,15 @@ export default function CartPage() {
 
                 {cart?.items.map((item) => {
                   const menuItem = item.menuItem ?? undefined;
-                  const name = menuItem?.title ?? "Item";
+                  const productVariant = item.productVariant ?? undefined;
+                  const name = menuItem?.title ?? productVariant?.title ?? t(dict, "cart.item");
                   const description = menuItem?.description ?? "";
-                  const imageUrl = menuItem?.imageUrl ?? null;
+                  const imageUrl = menuItem?.imageUrl ?? productVariant?.imageUrl ?? null;
+                  const resolvedImage = imageUrl
+                    ? { src: imageUrl, position: getCartImagePosition(name) }
+                    : menuItem
+                      ? resolveMenuImage(name)
+                      : resolveProductImage(name);
                   const unavailable = menuItem ? !menuItem.isAvailable : false;
 
                   return (
@@ -303,14 +314,14 @@ export default function CartPage() {
                       className="group card-hover flex flex-col gap-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-5 shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-crisp sm:flex-row"
                     >
                       <ImageWrapper
-                        src={imageUrl}
+                        src={resolvedImage.src}
                         alt={name}
                         aspect="menu"
                         sizes="96px"
                         className="w-24 flex-shrink-0 rounded-xl"
                         imageClassName="transition duration-300 group-hover:scale-105"
-                        objectPositionClassName={getCartImagePosition(name)}
-                        fallbackLabel="No image"
+                        objectPositionClassName={resolvedImage.position}
+                        fallbackLabel={t(dict, "checkout.noImage")}
                       />
                       <div className="flex flex-1 flex-col gap-3">
                         <div className="flex items-start justify-between gap-3">
@@ -322,7 +333,7 @@ export default function CartPage() {
                               <p className="text-sm text-brand-ink/60">{description}</p>
                             ) : null}
                             {unavailable ? (
-                              <p className="mt-1 text-xs text-brand-cinnabar">Unavailable</p>
+                              <p className="mt-1 text-xs text-brand-cinnabar">{t(dict, "cart.unavailable")}</p>
                             ) : null}
                           </div>
                           <span className="text-sm font-semibold text-brand-gold">
@@ -335,9 +346,11 @@ export default function CartPage() {
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="flex items-center gap-2 rounded-full border border-brand-gold/30 px-3 py-1 text-sm">
                             <button
+                              type="button"
                               onClick={() => updateMutation.mutate({ id: item.id, quantity: item.quantity - 1 })}
                               disabled={item.quantity <= 1 || updateMutation.isPending}
-                              className="text-brand-ink/70 transition hover:text-brand-gold"
+                              aria-label={`${t(dict, "market.decreaseQuantity")} ${name}`}
+                              className="text-brand-ink/70 transition hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
                             >
                               -
                             </button>
@@ -345,19 +358,22 @@ export default function CartPage() {
                               {item.quantity}
                             </span>
                             <button
+                              type="button"
                               onClick={() => updateMutation.mutate({ id: item.id, quantity: item.quantity + 1 })}
                               disabled={updateMutation.isPending}
-                              className="text-brand-ink/70 transition hover:text-brand-gold"
+                              aria-label={`${t(dict, "market.increaseQuantity")} ${name}`}
+                              className="text-brand-ink/70 transition hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
                             >
                               +
                             </button>
                           </div>
                           <button
+                            type="button"
                             onClick={() => removeMutation.mutate(item.id)}
                             disabled={removeMutation.isPending}
-                            className="text-xs font-semibold text-brand-cinnabar transition hover:text-brand-cinnabar/80"
+                            className="text-xs font-semibold text-brand-cinnabar transition hover:text-brand-cinnabar/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
                           >
-                            Remove
+                            {t(dict, "cart.remove")}
                           </button>
                         </div>
                       </div>
@@ -369,6 +385,7 @@ export default function CartPage() {
               <aside className="hidden lg:block">
                 <div className="sticky top-24 space-y-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-6 shadow-crisp">
                   <SummaryCard
+                    dict={dict}
                     cart={cart}
                     effectiveTotals={effectiveTotals}
                     promotions={activePromotions}
@@ -395,7 +412,7 @@ export default function CartPage() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-gold/10 bg-brand-obsidian/95 p-4 shadow-crisp lg:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-brand-ink/60">Total</p>
+              <p className="text-xs text-brand-ink/60">{t(dict, "cart.total")}</p>
               <p className="text-base font-semibold text-brand-ink">
                 {formatCurrency(effectiveTotals.totalAmountMinor, effectiveTotals.currency)}
               </p>
@@ -404,7 +421,7 @@ export default function CartPage() {
               href={`/${resolveLocale()}/${resolveCountry()}/checkout`}
               className="btn btn-gold"
             >
-              Proceed to Checkout
+              {t(dict, "cart.proceedCheckout")}
             </Link>
           </div>
         </div>
@@ -414,6 +431,7 @@ export default function CartPage() {
 }
 
 function SummaryCard({
+  dict,
   cart,
   effectiveTotals,
   promotions,
@@ -425,6 +443,7 @@ function SummaryCard({
   couponError,
   onClearCoupon
 }: {
+  dict: ReturnType<typeof getDictionary>;
   cart: NonNullable<CartResponse["cart"]>;
   effectiveTotals: CouponTotals;
   promotions: Promotion[];
@@ -443,16 +462,14 @@ function SummaryCard({
     <div className="space-y-3">
       {promotions.length > 0 ? (
         <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-xs text-brand-ink/70">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-brand-gold/60">
-            Active promotions
-          </p>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-brand-gold/60">{t(dict, "cart.activePromotions")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {promotions.map((promo) => (
               <span
                 key={promo.id}
                 className="rounded-full border border-brand-gold/20 bg-brand-gold/10 px-2 py-1 text-[11px] text-brand-gold"
               >
-                {promo.discountPercent ? `${promo.discountPercent}% OFF` : promo.label || "Special"}
+                {promo.discountPercent ? `${promo.discountPercent}% OFF` : promo.label || t(dict, "checkout.special")}
               </span>
             ))}
           </div>
@@ -460,56 +477,59 @@ function SummaryCard({
       ) : null}
 
       <div className="rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-3">
-        <label className="text-xs uppercase tracking-[0.2em] text-brand-gold/60">Coupon</label>
+        <label htmlFor="cart-coupon" className="text-xs uppercase tracking-[0.2em] text-brand-gold/60">{t(dict, "cart.coupon")}</label>
         <div className="mt-2 flex gap-2">
           <input
+            id="cart-coupon"
+            name="cartCoupon"
             value={couponCode}
             onChange={(event) => setCouponCode(event.target.value)}
-            placeholder="Enter code"
-            className="w-full rounded-lg border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink"
+            placeholder={t(dict, "cart.couponPlaceholder")}
+            className="w-full rounded-lg border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
           />
           <button
+            type="button"
             onClick={onApplyCoupon}
             disabled={!couponCode.trim() || isApplyingCoupon}
-            className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-black"
+            className="rounded-lg bg-brand-gold px-3 py-2 text-xs font-semibold text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed disabled:bg-brand-gold/40"
           >
-            {isApplyingCoupon ? "Applying" : "Apply"}
+            {isApplyingCoupon ? t(dict, "cart.applying") : t(dict, "cart.apply")}
           </button>
         </div>
         {couponMessage ? (
-          <div className="mt-2 flex items-center justify-between gap-2 text-xs text-emerald-700">
+          <div className="mt-2 flex items-center justify-between gap-2 text-xs text-emerald-700" role="status" aria-live="polite">
             <span>{couponMessage}</span>
-            <button onClick={onClearCoupon} className="text-[11px] uppercase tracking-[0.2em]">
-              Clear
+            <button type="button" onClick={onClearCoupon} className="text-[11px] uppercase tracking-[0.2em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60">
+              {t(dict, "cart.clear")}
             </button>
           </div>
         ) : null}
-        {couponError ? <p className="mt-2 text-xs text-brand-cinnabar">{couponError}</p> : null}
+        {couponError ? <p className="mt-2 text-xs text-brand-cinnabar" role="alert">{couponError}</p> : null}
       </div>
 
       <div className="flex items-center justify-between text-sm text-brand-ink/70">
-        <span>Subtotal</span>
+        <span>{t(dict, "cart.subtotal")}</span>
         <span>{formatCurrency(cart.subtotalAmountMinor, cart.currency)}</span>
       </div>
       <div className="flex items-center justify-between text-sm text-brand-ink/70">
-        <span>Delivery fee</span>
-        <span>{deliveryFee > 0 ? formatCurrency(deliveryFee, cart.currency) : "TBD"}</span>
+        <span>{t(dict, "cart.deliveryFee")}</span>
+        <span>{deliveryFee > 0 ? formatCurrency(deliveryFee, cart.currency) : t(dict, "cart.tbd")}</span>
       </div>
       {discountAmount > 0 ? (
         <div className="flex items-center justify-between text-sm text-emerald-700">
-          <span>Discount</span>
+          <span>{t(dict, "cart.discount")}</span>
           <span>-{formatCurrency(discountAmount, effectiveTotals.currency)}</span>
         </div>
       ) : null}
       <div className="flex items-center justify-between border-t border-brand-gold/10 pt-3 text-base font-semibold text-brand-ink">
-        <span>Total</span>
+        <span>{t(dict, "cart.total")}</span>
         <span>{formatCurrency(effectiveTotals.totalAmountMinor, effectiveTotals.currency)}</span>
       </div>
       <Link
         href={`/${resolveLocale()}/${resolveCountry()}/checkout`}
         className="block rounded-full bg-brand-gold px-4 py-2 text-center text-sm font-semibold text-black"
       >
-        Proceed to Checkout
+        {t(dict, "cart.proceedCheckout")}
       </Link>
     </div>
   );
@@ -530,16 +550,16 @@ function CartSkeleton() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ dict }: { dict: ReturnType<typeof getDictionary> }) {
   return (
     <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-6 text-center text-sm text-brand-ink/70 shadow-soft">
-      <p className="text-base font-semibold text-brand-ink">Your cart is empty</p>
-      <p className="mt-2">Browse the menu and add items to get started.</p>
+      <p className="text-base font-semibold text-brand-ink">{t(dict, "cart.empty")}</p>
+      <p className="mt-2">{t(dict, "cart.emptyMessage")}</p>
       <Link
         href={`/${resolveLocale()}/${resolveCountry()}/menu`}
         className="btn btn-gold mt-4 inline-flex"
       >
-        Explore Menu
+        {t(dict, "nav.menu")}
       </Link>
     </div>
   );

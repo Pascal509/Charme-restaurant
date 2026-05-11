@@ -1,8 +1,14 @@
 export const images = {
   hero: "/images/broccoli.jpg",
   cuisine: "/images/chinese-cuisine.jpg",
-  dining: "/images/Charme-restaurant.jpg",
-  tea: "/images/Charme-bubble-Tea-shop.jpg",
+  dining: "/images/chinese-cuisine1.jpg",
+  tea: "/tea&iced-cream/cha&tea.jpg",
+  teaGallery: [
+    "/tea&iced-cream/cha&tea.jpg",
+    "/tea&iced-cream/cha&tea2.jpg",
+    "/tea&iced-cream/chat&tea1.jpg",
+    "/tea&iced-cream/chat&tea3.jpg"
+  ],
   menu: {
     dumplings: "/images/Fresh-homemade-Chinese-boiled-dumplings.jpg",
     noodles: "/images/noodles.jpg",

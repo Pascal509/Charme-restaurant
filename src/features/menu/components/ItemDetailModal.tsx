@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MenuItem } from "@/features/menu/types";
 import ImageWrapper from "@/components/ui/ImageWrapper";
+import { getDictionary, t } from "@/lib/i18n";
 import {
   StarRatingDisplay,
   StarRatingInput,
@@ -35,15 +36,20 @@ export default function ItemDetailModal({
   quantity,
   onQuantityChange,
   onClose,
-  onConfirm
+  onConfirm,
+  locale
 }: {
   item: MenuItem;
   quantity: number;
   onQuantityChange: (value: number) => void;
   onClose: () => void;
   onConfirm: () => void;
+  locale?: string;
 }) {
   const queryClient = useQueryClient();
+  const dict = getDictionary(locale);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewMessage, setReviewMessage] = useState<string | null>(null);
@@ -56,7 +62,7 @@ export default function ItemDetailModal({
     queryFn: async () => {
       const response = await fetch(`/api/reviews?itemId=${item.id}`);
       if (!response.ok) {
-        throw new Error("Failed to load reviews");
+        throw new Error(t(dict, "itemDetail.loadReviewsError"));
       }
       return response.json();
     }
@@ -76,13 +82,13 @@ export default function ItemDetailModal({
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || "Failed to submit review");
+        throw new Error(payload.error || t(dict, "itemDetail.reviewError"));
       }
 
       return payload as { review: Review };
     },
     onSuccess: () => {
-      setReviewMessage("Thanks for your review.");
+      setReviewMessage(t(dict, "itemDetail.reviewSuccess"));
       setReviewError(null);
       setReviewRating(0);
       setReviewComment("");
@@ -90,14 +96,41 @@ export default function ItemDetailModal({
       queryClient.invalidateQueries({ queryKey: ["menu"] });
     },
     onError: (error) => {
-      setReviewError(error instanceof Error ? error.message : "Failed to submit review");
+      setReviewError(error instanceof Error ? error.message : t(dict, "itemDetail.reviewError"));
       setReviewMessage(null);
     }
   });
 
+  useEffect(() => {
+    lastFocusedElementRef.current = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      lastFocusedElementRef.current?.focus();
+    };
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm transition-opacity animate-fade-in">
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-brand-gold/10 bg-brand-obsidian shadow-crisp animate-soft-scale">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="item-detail-title"
+        aria-describedby="item-detail-description"
+        tabIndex={-1}
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-brand-gold/10 bg-brand-obsidian shadow-crisp animate-soft-scale focus-visible:outline-none"
+      >
         <ImageWrapper
           src={item.imageUrl}
           alt={item.name}
@@ -106,22 +139,23 @@ export default function ItemDetailModal({
           blurDataURL={blurData}
           className="w-full mb-6"
           objectPositionClassName={getMenuObjectPosition(item.name)}
-          fallbackLabel="No image"
+          fallbackLabel={t(dict, "checkout.noImage")}
         >
           <button
+            type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-full border border-brand-gold/30 bg-black/70 px-4 py-2 text-xs font-semibold text-brand-gold"
+            className="absolute right-4 top-4 rounded-full border border-brand-gold/30 bg-black/70 px-4 py-2 text-xs font-semibold text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
           >
-            Close
+            {t(dict, "common.close")}
           </button>
           <div className="absolute bottom-6 left-6">
-            <p className="text-xs uppercase tracking-[0.35em] text-brand-gold/80">Details</p>
-            <h3 className="mt-2 font-display text-3xl text-brand-ink sm:text-4xl">
+            <p className="text-xs uppercase tracking-[0.35em] text-brand-gold/80">{t(dict, "common.viewMore")}</p>
+            <h2 id="item-detail-title" className="mt-2 font-display text-3xl text-brand-ink sm:text-4xl">
               {item.name}
-            </h3>
+            </h2>
           </div>
         </ImageWrapper>
-        <div className="flex-1 space-y-6 overflow-y-auto p-6">
+        <div id="item-detail-description" className="flex-1 space-y-6 overflow-y-auto p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               {item.description ? (
@@ -131,7 +165,7 @@ export default function ItemDetailModal({
               ) : null}
             </div>
             <div className="text-right">
-              <p className="text-xs text-brand-gold/70">From</p>
+                <p className="text-xs text-brand-gold/70">{t(dict, "itemDetail.from")}</p>
               <p className="text-lg font-semibold text-brand-gold">
                 {formatCurrency(item.priceMinor, item.currency)}
               </p>
@@ -141,7 +175,7 @@ export default function ItemDetailModal({
           {item.modifierGroups && item.modifierGroups.length > 0 ? (
             <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-gold/70">
-                Modifiers
+                {t(dict, "itemDetail.modifiers")}
               </p>
               <div className="mt-4 space-y-3">
                 {item.modifierGroups.map((group) => (
@@ -169,7 +203,7 @@ export default function ItemDetailModal({
                 ))}
               </div>
               <p className="mt-3 text-xs text-brand-ink/60">
-                Select options after tapping Add to Cart.
+                {t(dict, "itemDetail.selectOptions")}
               </p>
             </div>
           ) : null}
@@ -178,7 +212,7 @@ export default function ItemDetailModal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold/70">
-                  Reviews
+                  {t(dict, "itemDetail.reviews")}
                 </p>
                 <div className="mt-2 flex items-center gap-2 text-sm text-brand-ink/70">
                   <StarRatingDisplay
@@ -194,22 +228,22 @@ export default function ItemDetailModal({
               </div>
               {reviewsQuery.data?.hasReviewed ? (
                 <span className="rounded-full border border-brand-gold/20 bg-black/40 px-3 py-1 text-xs text-brand-ink/70">
-                  Review submitted
+                  {t(dict, "itemDetail.reviewSubmitted")}
                 </span>
               ) : null}
             </div>
 
             {reviewsQuery.isLoading ? (
-              <p className="mt-3 text-xs text-brand-ink/60">Loading reviews...</p>
+              <p className="mt-3 text-xs text-brand-ink/60" role="status" aria-live="polite">{t(dict, "itemDetail.loadingReviews")}</p>
             ) : reviewsQuery.isError ? (
-              <p className="mt-3 text-xs text-brand-cinnabar">Unable to load reviews.</p>
+              <p className="mt-3 text-xs text-brand-cinnabar" role="alert">{t(dict, "itemDetail.loadReviewsError")}</p>
             ) : reviewsQuery.data?.reviews.length ? (
               <div className="mt-4 space-y-3">
                 {reviewsQuery.data.reviews.map((review) => (
                   <div key={review.id} className="rounded-xl border border-brand-gold/10 px-3 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm font-semibold text-brand-ink">
-                        {review.user?.name || "Guest"}
+                        {review.user?.name || t(dict, "common.guest")}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-brand-ink/60">
                         <StarRatingDisplay rating={review.rating} />
@@ -223,13 +257,13 @@ export default function ItemDetailModal({
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-xs text-brand-ink/60">No reviews yet.</p>
+              <p className="mt-3 text-xs text-brand-ink/60">{t(dict, "itemDetail.noReviews")}</p>
             )}
 
             {reviewsQuery.data?.canReview ? (
               <div className="mt-4 border-t border-brand-gold/10 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold/70">
-                  Add a review
+                  {t(dict, "itemDetail.addReview")}
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <StarRatingInput value={reviewRating} onChange={setReviewRating} />
@@ -239,22 +273,23 @@ export default function ItemDetailModal({
                   value={reviewComment}
                   onChange={(event) => setReviewComment(event.target.value)}
                   rows={3}
-                  placeholder="Share a quick note (optional)"
-                  className="mt-3 w-full rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink"
+                  placeholder={t(dict, "itemDetail.shareNote")}
+                  className="mt-3 w-full rounded-xl border border-brand-gold/10 bg-black/40 px-3 py-2 text-sm text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
                 />
                 <div className="mt-3 flex items-center gap-3">
                   <button
+                    type="button"
                     onClick={() => reviewMutation.mutate()}
                     disabled={reviewRating === 0 || reviewMutation.isPending}
-                    className="rounded-full bg-brand-gold px-4 py-2 text-xs font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
+                    className="rounded-full bg-brand-gold px-4 py-2 text-xs font-semibold text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed disabled:bg-brand-gold/40"
                   >
-                    {reviewMutation.isPending ? "Submitting" : "Submit review"}
+                    {reviewMutation.isPending ? t(dict, "itemDetail.submitting") : t(dict, "itemDetail.submitReview")}
                   </button>
                   {reviewMessage ? (
-                    <span className="text-xs text-emerald-700">{reviewMessage}</span>
+                    <span className="text-xs text-emerald-700" role="status" aria-live="polite">{reviewMessage}</span>
                   ) : null}
                   {reviewError ? (
-                    <span className="text-xs text-brand-cinnabar">{reviewError}</span>
+                    <span className="text-xs text-brand-cinnabar" role="alert">{reviewError}</span>
                   ) : null}
                 </div>
               </div>
@@ -266,8 +301,9 @@ export default function ItemDetailModal({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 rounded-full border border-brand-gold/30 px-3 py-1 text-sm">
               <button
+                type="button"
                 onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-                className="text-brand-ink/70"
+                className="text-brand-ink/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
               >
                 -
               </button>
@@ -275,22 +311,24 @@ export default function ItemDetailModal({
                 {quantity}
               </span>
               <button
+                type="button"
                 onClick={() => onQuantityChange(quantity + 1)}
-                className="text-brand-ink/70"
+                className="text-brand-ink/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60"
               >
                 +
               </button>
             </div>
             <div className="flex items-center gap-4">
               <p className="text-sm font-semibold text-brand-ink">
-                Total: {formatCurrency(total, item.currency)}
+                {t(dict, "itemDetail.total")}: {formatCurrency(total, item.currency)}
               </p>
               <button
+                type="button"
                 onClick={onConfirm}
-                className="rounded-full bg-brand-gold px-5 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:bg-brand-gold/40"
+                className="rounded-full bg-brand-gold px-5 py-2 text-sm font-semibold text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed disabled:bg-brand-gold/40"
                 disabled={!item.isAvailable}
               >
-                Add to Cart
+                {t(dict, "itemDetail.addToCart")}
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@ import type { CartItemInput } from "@/features/cart/types";
 import { Money } from "@/lib/money";
 import { env } from "@/lib/env";
 import { getCatalogService } from "@/lib/catalog";
+import { resolveProductImage } from "@/lib/image-resolver";
 
 // In-memory storage for carts (key: cartId, value: cart)
 const carts = new Map<string, {
@@ -93,7 +94,72 @@ export async function getActiveCart(params: { userId?: string; guestId?: string 
     return null;
   }
 
-  return carts.get(cartId) || null;
+  const cart = carts.get(cartId);
+  if (!cart) return null;
+
+  // Enrich cart items with menuItem and productVariant data from catalog
+  const catalogService = getCatalogService();
+  
+  type EnrichedCartItem = typeof cart.items[number] & {
+    menuItem?: { title: string; description: string | null; imageUrl: string | null; isAvailable: boolean } | null;
+    productVariant?: { id: string; title: string; imageUrl: string | null; amountMinor: number; currency: string; stockOnHand: number } | null;
+  };
+
+  const enrichedItems: EnrichedCartItem[] = await Promise.all(
+    cart.items.map(async (item) => {
+      const enriched: EnrichedCartItem = { ...item };
+
+      // Enrich with menuItem data if menuItemId is present
+      if (item.menuItemId) {
+        try {
+          const menuItem = await catalogService.findMenuItemBySlug(item.menuItemId);
+          if (menuItem) {
+            enriched.menuItem = {
+              title: menuItem.name,
+              description: menuItem.description || null,
+              imageUrl: menuItem.imageUrl || null,
+              isAvailable: menuItem.isAvailable
+            };
+          }
+        } catch (error) {
+          // Silently handle catalog lookup errors
+          if (process.env.SHOW_DEMO_LOGS === "1") {
+            console.warn(`[MemoryCart] Failed to enrich menuItem ${item.menuItemId}:`, error);
+          }
+        }
+      }
+
+      // Enrich with productVariant data if productVariantId is present
+      if (item.productVariantId) {
+        try {
+          const product = await catalogService.findMarketProductBySkuOrSlug(item.productVariantId);
+          if (product) {
+            const resolvedProduct = product as typeof product & { imageUrl?: string | null };
+            enriched.productVariant = {
+              id: product.variant.id,
+              title: product.variant.title,
+              imageUrl: resolvedProduct.imageUrl ?? resolveProductImage(product.title).src,
+              amountMinor: product.variant.amountMinor,
+              currency: product.variant.currency,
+              stockOnHand: product.variant.stockOnHand
+            };
+          }
+        } catch (error) {
+          // Silently handle catalog lookup errors
+          if (process.env.SHOW_DEMO_LOGS === "1") {
+            console.warn(`[MemoryCart] Failed to enrich productVariant ${item.productVariantId}:`, error);
+          }
+        }
+      }
+
+      return enriched;
+    })
+  );
+
+  return {
+    ...cart,
+    items: enrichedItems
+  };
 }
 
 export async function addCartItem(cartId: string, input: CartItemInput) {
