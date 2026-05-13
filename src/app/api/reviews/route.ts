@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { prisma } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 import { validateOrThrow } from "@/lib/validation";
 import { createReviewSchema } from "@/lib/validation/payloads";
 
 export async function GET(request: NextRequest) {
+  const { prisma } = await import("@/lib/db");
   const url = new URL(request.url);
   const itemId = url.searchParams.get("itemId");
 
@@ -74,6 +77,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { prisma } = await import("@/lib/db");
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
