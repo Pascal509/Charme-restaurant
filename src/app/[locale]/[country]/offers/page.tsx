@@ -136,19 +136,19 @@ export default function OffersPage({ params }: OffersPageProps) {
       <section className="border-t border-brand-ink/10 bg-brand-obsidian">
         <Container className="py-12">
           <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-8 text-center">
-            <h2 className="text-2xl font-semibold text-brand-ink">{t(dict, "offers.ctaTitle")}</h2>
-            <p className="mt-3 text-brand-ink/70">{t(dict, "offers.ctaSubtitle")}</p>
+            <h2 className="text-2xl font-semibold text-brand-ink">{t(dict, "offers.discoverOffersTitle")}</h2>
+            <p className="mt-3 text-brand-ink/70">{t(dict, "offers.discoverOffersSubtitle")}</p>
             <Link
               href={`${basePath}/menu`}
               className="mt-6 inline-block rounded-full bg-brand-gold px-6 py-3 text-sm font-semibold text-black transition hover:shadow-soft"
             >
-              {t(dict, "offers.ctaMenu")}
+              {t(dict, "offers.browseMenu")}
             </Link>
             <Link
               href={`mailto:info@charme-restaurant.com`}
               className="mt-6 ml-3 inline-block rounded-full border border-brand-gold/20 px-6 py-3 text-sm font-semibold text-brand-ink transition hover:border-brand-gold/40 hover:bg-white/10"
             >
-              {t(dict, "offers.ctaContact")}
+              {t(dict, "offers.contactTeam")}
             </Link>
           </div>
         </Container>

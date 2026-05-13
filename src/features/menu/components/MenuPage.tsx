@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
@@ -54,6 +54,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
   const [guestId, setGuestId] = useState<string | null>(null);
   const [categoryPages, setCategoryPages] = useState<Record<string, number>>({});
   const { itemCount, setItemCount, incrementBy } = useCartStore();
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
     if (id) setGuestId(id);
   }, []);
 
-  const cartQuery = useQuery<{ cart?: { items: Array<{ quantity: number }> } }>({
+  const cartQuery = useQuery<{ cart?: { items: Array<{ quantity: number }> } }, Error, number>({
     queryKey: ["cart", guestId],
     enabled: Boolean(guestId),
     queryFn: async () => {
@@ -69,14 +70,14 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
       if (!response.ok) return {};
       return response.json();
     },
+    select: (data) => data.cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
     staleTime: 15 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false
   });
 
   useEffect(() => {
-    const count = cartQuery.data?.cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
-    setItemCount(count);
+    setItemCount(cartQuery.data ?? 0);
   }, [cartQuery.data, setItemCount]);
 
   const addMutation = useMutation({
@@ -124,7 +125,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
   }, [activeCategory, categories]);
 
   const filteredCategories = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = deferredSearchTerm.trim().toLowerCase();
     const withinPrice = (item: MenuItem) => {
       if (priceFilter === "low") return item.priceMinor < 5000;
       if (priceFilter === "mid") return item.priceMinor >= 5000 && item.priceMinor < 15000;
@@ -144,7 +145,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
         })
       }))
       .filter((category) => category.items.length > 0);
-  }, [categories, priceFilter, searchTerm, selectedCategoryId]);
+  }, [categories, deferredSearchTerm, priceFilter, selectedCategoryId]);
 
   useEffect(() => {
     setCategoryPages({});
@@ -178,21 +179,24 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
     return () => observer.disconnect();
   }, [filteredCategories]);
 
-  function handleAddToCart(item: MenuItem, sourceEl?: HTMLDivElement | null, imageUrl?: string) {
-    if (item.modifierGroups && item.modifierGroups.length > 0) {
-      setSelectedItem(item);
-      setSelectedOptions({});
-      return;
-    }
+  const handleAddToCart = useCallback(
+    (item: MenuItem, sourceEl?: HTMLDivElement | null, imageUrl?: string) => {
+      if (item.modifierGroups && item.modifierGroups.length > 0) {
+        setSelectedItem(item);
+        setSelectedOptions({});
+        return;
+      }
 
-    if (imageUrl && sourceEl) {
-      animateFlyToCart(imageUrl, sourceEl);
-    }
-    pulseCartIcon();
-    addMutation.mutate({ menuItemId: item.id, quantity: 1, selectedOptions: [] });
-  }
+      if (imageUrl && sourceEl) {
+        animateFlyToCart(imageUrl, sourceEl);
+      }
+      pulseCartIcon();
+      addMutation.mutate({ menuItemId: item.id, quantity: 1, selectedOptions: [] });
+    },
+    [addMutation]
+  );
 
-  function handleConfirmModifiers() {
+  const handleConfirmModifiers = useCallback(() => {
     if (!selectedItem) return;
 
     const flattened = Object.values(selectedOptions).flat();
@@ -216,14 +220,14 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
 
     setSelectedItem(null);
     setSelectedOptions({});
-  }
+  }, [addMutation, selectedItem, selectedOptions]);
 
-  function openDetail(item: MenuItem) {
+  const openDetail = useCallback((item: MenuItem) => {
     setDetailItem(item);
     setDetailQty(1);
-  }
+  }, []);
 
-  function handleConfirmDetail() {
+  const handleConfirmDetail = useCallback(() => {
     if (!detailItem) return;
     if (detailItem.modifierGroups && detailItem.modifierGroups.length > 0) {
       setSelectedItem(detailItem);
@@ -239,7 +243,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
     });
     pulseCartIcon();
     setDetailItem(null);
-  }
+  }, [addMutation, detailItem, detailQty]);
 
   const cartBadge = itemCount > 0 ? (
     <span
@@ -388,7 +392,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
                           key={`featured-${item.id}`}
                           item={item}
                           onAdd={handleAddToCart}
-                          onOpen={() => openDetail(item)}
+                            onOpen={openDetail}
                           onFocus={setFocusedItem}
                           locale={locale}
                           dict={dict}
@@ -424,7 +428,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
                                 key={item.id}
                                 item={item}
                                 onAdd={handleAddToCart}
-                                onOpen={() => openDetail(item)}
+                                onOpen={openDetail}
                                 onFocus={setFocusedItem}
                                 locale={locale}
                                 dict={dict}
@@ -483,7 +487,7 @@ export default function MenuPage({ categories: initialCategories, locale }: Menu
   );
 }
 
-function MenuItemCard({
+const MenuItemCard = memo(function MenuItemCard({
   item,
   onAdd,
   onOpen,
@@ -493,7 +497,7 @@ function MenuItemCard({
 }: {
   item: MenuItem;
   onAdd: (item: MenuItem, sourceEl?: HTMLDivElement | null, imageUrl?: string) => void;
-  onOpen: () => void;
+  onOpen: (item: MenuItem) => void;
   onFocus: (item: MenuItem) => void;
   locale?: string;
   dict: ReturnType<typeof getDictionary>;
@@ -553,7 +557,7 @@ function MenuItemCard({
         <div className="mt-auto flex items-center justify-between gap-3 pt-2">
           <button
             className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-ink/70 transition hover:text-brand-gold"
-            onClick={onOpen}
+            onClick={() => onOpen(item)}
           >
             {t(dict, "menu.details")}
           </button>
@@ -568,7 +572,7 @@ function MenuItemCard({
       </div>
     </article>
   );
-}
+});
 
 function MobileCategoryTabs({
   categories,

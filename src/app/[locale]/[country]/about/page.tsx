@@ -94,8 +94,8 @@ export default function AboutPage({ params }: AboutPageProps) {
             </div>
 
             <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-gold/80">{t(dict, "about.ctaTitle")}</p>
-              <p className="mt-4 text-sm leading-7 text-brand-ink/75">{t(dict, "about.ctaSubtitle")}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-gold/80">{t(dict, "about.experienceTitle")}</p>
+              <p className="mt-4 text-sm leading-7 text-brand-ink/75">{t(dict, "about.experienceSubtitle")}</p>
               <Link
                 href={`${basePath}/menu`}
                 className="mt-6 inline-block rounded-full bg-brand-gold px-6 py-3 text-sm font-semibold text-black transition hover:shadow-soft"

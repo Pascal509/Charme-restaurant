@@ -17,7 +17,7 @@ export const zhCN = {
     explore: "浏览",
     learnMore: "了解更多",
     viewMore: "查看更多",
-    contactUs: "联系我们",
+    getInTouch: "联系我们",
     email: "电子邮件",
     phone: "电话",
     address: "地址",
@@ -260,10 +260,10 @@ export const zhCN = {
     validUntil: "有效期至",
     minOrder: "最小订单",
     appliedAutomatically: "在结账时自动应用",
-    ctaTitle: "规划下一次用餐体验",
-    ctaSubtitle: "预订餐位，或从菜单中选择最适合你场合的菜式。",
-    ctaMenu: "查看菜单",
-    ctaContact: "联系我们"
+    discoverOffersTitle: "规划下一次用餐体验",
+    discoverOffersSubtitle: "预订餐位，或从菜单中选择最适合你场合的菜式。",
+    browseMenu: "查看菜单",
+    contactTeam: "联系我们"
   },
 
   locations: {
@@ -304,7 +304,7 @@ export const zhCN = {
 
     callUs: "致电我们",
     visitUs: "访问我们",
-    makeReservation: "预订餐位",
+    reserveTable: "预订餐位",
     branchFallback: "门店"
   },
 
@@ -321,8 +321,8 @@ export const zhCN = {
     positioningTitle: "文化定位",
     positioning:
       "Charme 融合现代设计、区域风味与本地化的温暖服务，形成一个当代而不失文化温度的高品质体验。",
-    ctaTitle: "体验 Charme 标准",
-    ctaSubtitle: "为日常用餐、特别场合以及介于两者之间的一切时刻而打造的现代餐厅与市场。",
+    experienceTitle: "体验 Charme 标准",
+    experienceSubtitle: "为日常用餐、特别场合以及介于两者之间的一切时刻而打造的现代餐厅与市场。",
 
     ourStory: {
       title: "我们的故事",

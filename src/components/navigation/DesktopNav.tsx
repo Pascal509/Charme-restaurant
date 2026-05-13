@@ -1,10 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import NavLinks from "@/components/navigation/NavLinks";
 import LocaleCountrySwitcher from "@/components/navigation/LocaleCountrySwitcher";
-import NotificationCenter from "@/features/notifications/components/NotificationCenter";
 import CartIconLink from "@/components/navigation/CartIconLink";
 import { getDictionary, t } from "@/lib/i18n";
+
+const NotificationCenter = dynamic(
+  () => import("@/features/notifications/components/NotificationCenter"),
+  { ssr: false, loading: () => null }
+);
 
 export default function DesktopNav({
   locale,

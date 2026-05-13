@@ -15,7 +15,7 @@ export const en = {
     explore: "Explore",
     learnMore: "Learn More",
     viewMore: "View More",
-    contactUs: "Contact Us",
+    getInTouch: "Get in Touch",
     email: "Email",
     phone: "Phone",
     address: "Address",
@@ -261,10 +261,10 @@ export const en = {
     validUntil: "Valid until",
     minOrder: "Minimum order",
     appliedAutomatically: "Applied automatically at checkout",
-    ctaTitle: "Plan your next dining experience",
-    ctaSubtitle: "Reserve a table or start with a menu favorite shaped for your occasion.",
-    ctaMenu: "View Menu",
-    ctaContact: "Talk to Us"
+    discoverOffersTitle: "Plan your next dining experience",
+    discoverOffersSubtitle: "Reserve a table or start with a menu favorite shaped for your occasion.",
+    browseMenu: "View Menu",
+    contactTeam: "Talk to Us"
   },
 
   locations: {
@@ -305,7 +305,7 @@ export const en = {
 
     callUs: "Call us",
     visitUs: "Visit us",
-    makeReservation: "Make a Reservation",
+    reserveTable: "Make a Reservation",
     branchFallback: "Location"
   },
 
@@ -322,8 +322,8 @@ export const en = {
     positioningTitle: "Cultural Positioning",
     positioning:
       "Charme blends modern design, regional culinary influences, and warm local service. The result is a premium experience that feels contemporary without losing cultural warmth.",
-    ctaTitle: "Experience the Charme standard",
-    ctaSubtitle: "A modern restaurant and market created for everyday dining, special occasions, and everything in between.",
+    experienceTitle: "Experience the Charme standard",
+    experienceSubtitle: "A modern restaurant and market created for everyday dining, special occasions, and everything in between.",
 
     ourStory: {
       title: "Our Story",

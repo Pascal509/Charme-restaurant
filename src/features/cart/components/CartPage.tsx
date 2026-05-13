@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
@@ -266,6 +266,20 @@ export default function CartPage({ locale }: { locale: string }) {
     );
   }, [cart, promotionsQuery.data]);
 
+  const handleUpdateQuantity = useCallback(
+    (itemId: string, quantity: number) => {
+      updateMutation.mutate({ id: itemId, quantity });
+    },
+    [updateMutation]
+  );
+
+  const handleRemoveItem = useCallback(
+    (itemId: string) => {
+      removeMutation.mutate(itemId);
+    },
+    [removeMutation]
+  );
+
   return (
     <main className="bg-brand-rice">
       <Container className="py-10">
@@ -309,75 +323,19 @@ export default function CartPage({ locale }: { locale: string }) {
                   const unavailable = menuItem ? !menuItem.isAvailable : false;
 
                   return (
-                    <div
+                    <CartItemRow
                       key={item.id}
-                      className="group card-hover flex flex-col gap-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-5 shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-crisp sm:flex-row"
-                    >
-                      <ImageWrapper
-                        src={resolvedImage.src}
-                        alt={name}
-                        aspect="menu"
-                        sizes="96px"
-                        className="w-24 flex-shrink-0 rounded-xl"
-                        imageClassName="transition duration-300 group-hover:scale-105"
-                        objectPositionClassName={resolvedImage.position}
-                        fallbackLabel={t(dict, "checkout.noImage")}
-                      />
-                      <div className="flex flex-1 flex-col gap-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-display text-base font-semibold text-brand-ink sm:text-lg">
-                              {name}
-                            </h3>
-                            {description ? (
-                              <p className="text-sm text-brand-ink/60">{description}</p>
-                            ) : null}
-                            {unavailable ? (
-                              <p className="mt-1 text-xs text-brand-cinnabar">{t(dict, "cart.unavailable")}</p>
-                            ) : null}
-                          </div>
-                          <span className="text-sm font-semibold text-brand-gold">
-                            {formatCurrency(item.totalAmountMinor, item.currency)}
-                          </span>
-                        </div>
-
-                        {renderOptions(item.selectedOptions)}
-
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-2 rounded-full border border-brand-gold/30 px-3 py-1 text-sm">
-                            <button
-                              type="button"
-                              onClick={() => updateMutation.mutate({ id: item.id, quantity: item.quantity - 1 })}
-                              disabled={item.quantity <= 1 || updateMutation.isPending}
-                              aria-label={`${t(dict, "market.decreaseQuantity")} ${name}`}
-                              className="text-brand-ink/70 transition hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
-                            >
-                              -
-                            </button>
-                            <span className="min-w-[24px] text-center font-semibold text-brand-ink">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => updateMutation.mutate({ id: item.id, quantity: item.quantity + 1 })}
-                              disabled={updateMutation.isPending}
-                              aria-label={`${t(dict, "market.increaseQuantity")} ${name}`}
-                              className="text-brand-ink/70 transition hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeMutation.mutate(item.id)}
-                            disabled={removeMutation.isPending}
-                            className="text-xs font-semibold text-brand-cinnabar transition hover:text-brand-cinnabar/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
-                          >
-                            {t(dict, "cart.remove")}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      item={item}
+                      name={name}
+                      description={description}
+                      resolvedImage={resolvedImage}
+                      unavailable={unavailable}
+                      dict={dict}
+                      onUpdateQuantity={handleUpdateQuantity}
+                      onRemoveItem={handleRemoveItem}
+                      isUpdating={updateMutation.isPending}
+                      isRemoving={removeMutation.isPending}
+                    />
                   );
                 })}
               </div>
@@ -649,6 +607,130 @@ function resolveGuestId() {
   window.localStorage.setItem("guestId", nextId);
   return nextId;
 }
+
+const CartItemRow = memo(function CartItemRow({
+  item,
+  name,
+  description,
+  resolvedImage,
+  unavailable,
+  dict,
+  onUpdateQuantity,
+  onRemoveItem,
+  isUpdating,
+  isRemoving
+}: {
+  item: CartItem;
+  name: string;
+  description: string;
+  resolvedImage: { src: string; position: string };
+  unavailable: boolean;
+  dict: ReturnType<typeof getDictionary>;
+  onUpdateQuantity: (itemId: string, quantity: number) => void;
+  onRemoveItem: (itemId: string) => void;
+  isUpdating: boolean;
+  isRemoving: boolean;
+}) {
+  const handleQuantityDown = useCallback(() => {
+    if (item.quantity > 1) {
+      onUpdateQuantity(item.id, item.quantity - 1);
+    }
+  }, [item.id, item.quantity, onUpdateQuantity]);
+
+  const handleQuantityUp = useCallback(() => {
+    onUpdateQuantity(item.id, item.quantity + 1);
+  }, [item.id, item.quantity, onUpdateQuantity]);
+
+  const handleQuantityChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newQty = parseInt(e.currentTarget.value);
+      if (!isNaN(newQty) && newQty > 0) {
+        onUpdateQuantity(item.id, newQty);
+      }
+    },
+    [item.id, onUpdateQuantity]
+  );
+
+  const handleRemove = useCallback(() => {
+    onRemoveItem(item.id);
+  }, [item.id, onRemoveItem]);
+
+  return (
+    <div
+      className="group card-hover flex flex-col gap-4 rounded-2xl border border-brand-gold/10 bg-white/5 p-5 shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-crisp sm:flex-row"
+    >
+      <ImageWrapper
+        src={resolvedImage.src}
+        alt={name}
+        aspect="menu"
+        sizes="96px"
+        className="w-24 flex-shrink-0 rounded-xl"
+        imageClassName="transition duration-300 group-hover:scale-105"
+        objectPositionClassName={resolvedImage.position}
+        fallbackLabel={t(dict, "checkout.noImage")}
+      />
+      <div className="flex flex-1 flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-display text-base font-semibold text-brand-ink sm:text-lg">
+              {name}
+            </h3>
+            {description ? (
+              <p className="text-sm text-brand-ink/60">{description}</p>
+            ) : null}
+            {unavailable ? (
+              <p className="mt-1 text-xs text-brand-cinnabar">{t(dict, "cart.unavailable")}</p>
+            ) : null}
+          </div>
+          <span className="text-sm font-semibold text-brand-gold">
+            {formatCurrency(item.totalAmountMinor, item.currency)}
+          </span>
+        </div>
+
+        {renderOptions(item.selectedOptions)}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-full border border-brand-gold/30 px-3 py-1 text-sm">
+            <button
+              type="button"
+              onClick={handleQuantityDown}
+              disabled={item.quantity <= 1 || isUpdating}
+              aria-label={`${t(dict, "market.decreaseQuantity")} ${name}`}
+              className="text-brand-ink/70 transition hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              min="1"
+              value={item.quantity}
+              onChange={handleQuantityChange}
+              disabled={isUpdating}
+              className="min-w-[24px] bg-transparent text-center font-semibold text-brand-ink outline-none disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleQuantityUp}
+              disabled={isUpdating}
+              aria-label={`${t(dict, "market.increaseQuantity")} ${name}`}
+              className="text-brand-ink/70 transition hover:text-brand-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
+            >
+              +
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={isRemoving}
+            className="text-xs font-semibold text-brand-cinnabar transition hover:text-brand-cinnabar/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold/60 disabled:cursor-not-allowed"
+          >
+            {t(dict, "cart.remove")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 function resolveLocale() {
   if (typeof window === "undefined") return "en";

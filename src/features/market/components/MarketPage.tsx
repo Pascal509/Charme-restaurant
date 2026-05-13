@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Container from "@/components/layout/Container";
 import ImageWrapper from "@/components/ui/ImageWrapper";
@@ -53,11 +53,15 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
   const [guestId, setGuestId] = useState<string | null>(null);
   const [categoryPages, setCategoryPages] = useState<Record<string, number>>({});
   const { itemCount, setItemCount, incrementBy } = useCartStore();
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const deferredMinPrice = useDeferredValue(minPrice);
+  const deferredMaxPrice = useDeferredValue(maxPrice);
+  const deferredInStockOnly = useDeferredValue(inStockOnly);
 
   const filteredCategories = useMemo(() => {
-    const search = searchTerm.trim().toLowerCase();
-    const minValue = minPrice ? Number(minPrice) : null;
-    const maxValue = maxPrice ? Number(maxPrice) : null;
+    const search = deferredSearchTerm.trim().toLowerCase();
+    const minValue = deferredMinPrice ? Number(deferredMinPrice) : null;
+    const maxValue = deferredMaxPrice ? Number(deferredMaxPrice) : null;
 
     const priceInRange = (amountMinor: number) => {
       const amount = amountMinor / 100;
@@ -68,7 +72,7 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
 
     const matchesFilters = (product: MarketProduct) => {
       const matchesSearch = search ? product.title.toLowerCase().includes(search) : true;
-      const matchesAvailability = inStockOnly ? product.variant.stockOnHand > 0 : true;
+      const matchesAvailability = deferredInStockOnly ? product.variant.stockOnHand > 0 : true;
       const matchesPrice = priceInRange(product.variant.amountMinor);
       return matchesSearch && matchesAvailability && matchesPrice;
     };
@@ -84,7 +88,7 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
         products: category.products.filter(matchesFilters)
       }))
       .filter((category) => category.products.length > 0);
-  }, [categories, selectedCategoryId, searchTerm, minPrice, maxPrice, inStockOnly]);
+  }, [categories, selectedCategoryId, deferredSearchTerm, deferredMinPrice, deferredMaxPrice, deferredInStockOnly]);
 
   useEffect(() => {
     setCategoryPages({});
@@ -101,7 +105,7 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
     if (id) setGuestId(id);
   }, []);
 
-  const cartQuery = useQuery<{ cart?: { items: Array<{ quantity: number }> } }>({
+  const cartQuery = useQuery<{ cart?: { items: Array<{ quantity: number }> } }, Error, number>({
     queryKey: ["cart", guestId],
     enabled: Boolean(guestId),
     queryFn: async () => {
@@ -109,14 +113,14 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
       if (!response.ok) return {};
       return response.json();
     },
+    select: (data) => data.cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
     staleTime: 15 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false
   });
 
   useEffect(() => {
-    const count = cartQuery.data?.cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
-    setItemCount(count);
+    setItemCount(cartQuery.data ?? 0);
   }, [cartQuery.data, setItemCount]);
 
   useEffect(() => {
@@ -174,6 +178,13 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
       }
     }
   });
+
+  const handleAddToCart = useCallback(
+    (quantity: number, variantId: string) => {
+      addMutation.mutate({ productVariantId: variantId, quantity });
+    },
+    [addMutation]
+  );
 
   const cartBadge = itemCount > 0 ? (
     <span
@@ -358,12 +369,7 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
                               <ProductCard
                                 key={product.id}
                                 product={product}
-                                onAdd={(quantity) =>
-                                  addMutation.mutate({
-                                    productVariantId: product.variant.id,
-                                    quantity
-                                  })
-                                }
+                                onAdd={(quantity) => handleAddToCart(quantity, product.variant.id)}
                                 isAdding={addMutation.isPending}
                                 locale={locale}
                                 dict={dict}
@@ -398,7 +404,7 @@ export default function MarketPage({ categories, locale }: MarketPageProps) {
   );
 }
 
-function ProductCard({
+const ProductCard = memo(function ProductCard({
   product,
   onAdd,
   isAdding,
@@ -417,6 +423,18 @@ function ProductCard({
   const outOfStock = product.variant.stockOnHand <= 0;
   const lowStock = product.variant.stockOnHand > 0 && product.variant.stockOnHand <= 10;
   const imageMeta = getMarketImage(product.title);
+
+  const handleDecreaseQuantity = useCallback(() => {
+    setQuantity((value) => Math.max(1, value - 1));
+  }, []);
+
+  const handleIncreaseQuantity = useCallback(() => {
+    setQuantity((value) => Math.min(20, value + 1));
+  }, []);
+
+  const handleAdd = useCallback(() => {
+    onAdd(quantity);
+  }, [onAdd, quantity]);
 
   return (
     <div className="group flex h-full flex-col rounded-2xl border border-brand-gold/10 bg-white/5 p-5 transition duration-300 hover:-translate-y-1 hover:shadow-crisp">
@@ -458,7 +476,7 @@ function ProductCard({
         <div className="flex items-center gap-2 rounded-full border border-brand-gold/20 px-2 py-1">
           <button
             type="button"
-            onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+            onClick={handleDecreaseQuantity}
             className="text-brand-ink/70 transition hover:text-brand-gold"
             aria-label={t(dict, "market.decreaseQuantity")}
           >
@@ -469,7 +487,7 @@ function ProductCard({
           </span>
           <button
             type="button"
-            onClick={() => setQuantity((value) => Math.min(20, value + 1))}
+            onClick={handleIncreaseQuantity}
             className="text-brand-ink/70 transition hover:text-brand-gold"
             aria-label={t(dict, "market.increaseQuantity")}
           >
@@ -478,7 +496,7 @@ function ProductCard({
         </div>
       </div>
       <button
-        onClick={() => onAdd(quantity)}
+        onClick={handleAdd}
         disabled={outOfStock || isAdding}
         className="mt-4 rounded-full bg-brand-gold px-4 py-2 text-xs font-semibold text-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:bg-brand-ink/20"
       >
@@ -486,7 +504,7 @@ function ProductCard({
       </button>
     </div>
   );
-}
+});
 
 function PaginationBar({
   currentPage,

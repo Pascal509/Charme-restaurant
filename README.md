@@ -8,7 +8,7 @@
 
 A production-ready, bilingual restaurant & marketplace platform demonstrating modern full-stack architecture with resilient dual-mode deployment, comprehensive internationalization, and pluggable payment infrastructure.
 
-**[View Live Demo](#deployment-guides)** • **[Technical Architecture](#architecture-overview)** • **[Local Setup](#setup-instructions)**
+**[View Live Demo](#deployment)** • **[Technical Architecture](#architecture-overview)** • **[Local Setup](#setup-instructions)**
 
 ---
 
@@ -41,6 +41,34 @@ A production-ready, bilingual restaurant & marketplace platform demonstrating mo
 - **Modern full-stack patterns** — server components, middleware-based routing, type-safe environment variables, and comprehensive monitoring
 
 This project is optimized for both portfolio demonstration and production deployment, showcasing architectural decisions that balance demo reliability with enterprise scalability.
+
+---
+
+## 🎯 Portfolio Demo Guide
+
+> New to Charme? Start with the **[Demo Guide (DEMO.md)](./DEMO.md)** for a structured walkthrough optimized for recruiters and stakeholders (8-10 minutes).
+
+### Quick Demo
+
+```bash
+# Start the application in demo mode
+npm run dev
+
+# Open browser: http://localhost:3000/en/ng
+```
+
+**Demo Highlights (8-10 min):**
+1. **Homepage** — Brand identity and responsive design
+2. **Menu Search** — Real-time filtering with optimized performance
+3. **Market Browse** — Product inventory and stock management
+4. **Cart & Checkout** — Full purchase flow with payment integration
+5. **Bilingual Experience** — Switch between English and Simplified Chinese
+6. **Mobile Responsive** — DevTools responsive mode demonstration
+
+**For detailed walkthrough, screenshot ideas, and interview talking points:**  
+→ **[See DEMO.md](./DEMO.md)**
+
+---
 
 ## Feature Highlights
 
@@ -366,20 +394,18 @@ await updateOrderStatus(reference, status);
 
 ## Screenshots
 
-> *Placeholders for demo visuals. Add actual screenshots in the following locations:*
-
 ### Desktop Experience
 
-- `docs/screenshots/home-en.png` — English homepage with hero section
-- `docs/screenshots/home-zh.png` — Chinese homepage (CJK rendering)
-- `docs/screenshots/menu-en.png` — Menu listing with items
-- `docs/screenshots/checkout-en.png` — Checkout flow with payment redirect
+![English Homepage](docs/screenshots/home-en.png)
+![Chinese Homepage](docs/screenshots/home-zh.png)
+![Menu (English)](docs/screenshots/menu-en.png)
+![Checkout (English)](docs/screenshots/checkout-en.png)
 
 ### Mobile Experience
 
-- `docs/screenshots/mobile-menu.png` — Mobile menu browsing
-- `docs/screenshots/mobile-cart.png` — Mobile cart summary
-- `docs/screenshots/mobile-locale-switch.png` — Locale switcher on mobile
+![Mobile Menu](docs/screenshots/mobile-menu.png)
+![Mobile Cart](docs/screenshots/mobile-cart.png)
+![Mobile Locale Switch](docs/screenshots/mobile-locale-switch.png)
 
 ---
 

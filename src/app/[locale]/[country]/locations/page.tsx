@@ -9,7 +9,7 @@ interface LocationsPageProps {
   params: { locale: string; country: string };
 }
 
-const locationCards = [
+const locationBranches = [
   {
     id: 1,
     cityKey: "locations.cities.abuja",
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: LocationsPageProps) {
 export default function LocationsPage({ params }: LocationsPageProps) {
   const dict = getDictionary(params.locale);
   const basePath = `/${params.locale}/${params.country}`;
-  const location = locationCards[0];
+  const location = locationBranches[0];
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Restaurant",
@@ -83,13 +83,13 @@ export default function LocationsPage({ params }: LocationsPageProps) {
       {/* Locations Grid */}
       <section className="border-t border-brand-ink/10">
         <Container className="py-16">
-          {locationCards.length === 0 ? (
+          {locationBranches.length === 0 ? (
             <div className="rounded-2xl border border-brand-ink/10 bg-white p-8 text-center">
               <p className="text-brand-ink/60">{t(dict, "locations.noLocations")}</p>
             </div>
           ) : (
             <div className="mx-auto grid max-w-3xl gap-8">
-              {locationCards.map((location) => (
+              {locationBranches.map((location) => (
                 <div
                   key={location.id}
                   className="overflow-hidden rounded-2xl border border-brand-ink/10 bg-white shadow-soft transition hover:shadow-crisp hover:border-brand-gold/20"
@@ -165,7 +165,7 @@ export default function LocationsPage({ params }: LocationsPageProps) {
                       {t(dict, location.mapsLabelKey)}
                     </a>
                     <button className="flex-1 rounded-lg bg-brand-ink px-3 py-2 text-center text-xs font-semibold text-white hover:bg-brand-ink/90 transition">
-                      {t(dict, "locations.makeReservation")}
+                      {t(dict, "locations.reserveTable")}
                     </button>
                   </div>
                 </div>
@@ -179,13 +179,13 @@ export default function LocationsPage({ params }: LocationsPageProps) {
       <section className="border-t border-brand-ink/10 bg-brand-obsidian">
         <Container className="py-12">
           <div className="rounded-2xl border border-brand-gold/10 bg-white/5 p-8 text-center">
-            <h2 className="text-2xl font-semibold text-brand-ink">{t(dict, "locations.ctaTitle")}</h2>
-            <p className="mt-3 text-brand-ink/70">{t(dict, "locations.ctaSubtitle")}</p>
+            <h2 className="text-2xl font-semibold text-brand-ink">{t(dict, "locations.visitTitle")}</h2>
+            <p className="mt-3 text-brand-ink/70">{t(dict, "locations.visitSubtitle")}</p>
             <a
               href={`mailto:charme.aid@gmail.com`}
               className="mt-6 inline-block rounded-full bg-brand-gold px-6 py-3 text-sm font-semibold text-black transition hover:shadow-soft"
             >
-              {t(dict, "common.contactUs")}
+              {t(dict, "common.getInTouch")}
             </a>
           </div>
         </Container>

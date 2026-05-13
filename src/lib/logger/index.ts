@@ -3,10 +3,10 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 const isProd = process.env.NODE_ENV === "production";
 
 export function log(level: LogLevel, message: string, meta?: Record<string, unknown>) {
-  const payload = meta ? { message, ...meta } : { message };
+  // Suppress all logging in production for clean demo experience
   if (isProd) {
-    console[level](payload);
     return;
   }
+
   console[level](`[${level.toUpperCase()}] ${message}`, meta ?? "");
 }
