@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { idParamSchema } from "@/lib/validation/requests";
 import { updateCartItemSchema } from "@/lib/validation/payloads";
-import { cartService } from "@/features/cart/services/cartService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
+  const { cartService } = await import("@/features/cart/services/cartService");
   try {
     const params = idParamSchema.parse(context.params);
     const body = await request.json();
@@ -20,6 +23,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
 }
 
 export async function DELETE(_request: Request, context: { params: { id: string } }) {
+  const { cartService } = await import("@/features/cart/services/cartService");
   try {
     const params = idParamSchema.parse(context.params);
     const item = await cartService.removeCartItem(params.id);

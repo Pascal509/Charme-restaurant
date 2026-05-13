@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { referralApplySchema } from "@/lib/validation/payloads";
-import { applyReferralCode } from "@/features/loyalty/services/loyaltyService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const { applyReferralCode } = await import("@/features/loyalty/services/loyaltyService");
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { cartService } from "@/features/cart/services/cartService";
-import { getAvailablePaymentProviders } from "@/features/payment/services/paymentConfig";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /**
  * Mock Checkout Endpoint
@@ -22,6 +23,8 @@ function generateOrderId(): string {
 }
 
 export async function POST(request: Request) {
+  const { cartService } = await import("@/features/cart/services/cartService");
+  const { getAvailablePaymentProviders } = await import("@/features/payment/services/paymentConfig");
   try {
     const body = await request.json();
     const payload = checkoutRequestSchema.parse(body);

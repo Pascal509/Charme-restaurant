@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { checkoutSessionSchema } from "@/lib/validation/payloads";
-import { getActiveCart } from "@/features/cart/services/cartService";
-import { createOrderFromCart } from "@/features/checkout/services/checkoutService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const { getActiveCart } = await import("@/features/cart/services/cartService");
+  const { createOrderFromCart } = await import("@/features/checkout/services/checkoutService");
   try {
     const body = await request.json();
     const payload = checkoutSessionSchema.parse(body);

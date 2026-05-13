@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { cartOwnerSchema } from "@/lib/validation/payloads";
-import { cartService } from "@/features/cart/services/cartService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function DELETE(request: Request) {
+  const { cartService } = await import("@/features/cart/services/cartService");
   try {
     const url = new URL(request.url);
     const payload = cartOwnerSchema.parse({

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { cartValidationSchema } from "@/lib/validation/payloads";
-import { cartService } from "@/features/cart/services/cartService";
-import { validateCartForCheckout } from "@/features/checkout/services/checkoutService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const { cartService } = await import("@/features/cart/services/cartService");
+  const { validateCartForCheckout } = await import("@/features/checkout/services/checkoutService");
   try {
     const body = await request.json();
     const payload = cartValidationSchema.parse(body);

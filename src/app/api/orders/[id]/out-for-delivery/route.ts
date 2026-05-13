@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { transitionOrderStatus } from "@/features/orders/services/orderWorkflowService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(_request: Request, context: { params: { id: string } }) {
+  const { transitionOrderStatus } = await import("@/features/orders/services/orderWorkflowService");
   try {
     const order = await transitionOrderStatus({
       orderId: context.params.id,

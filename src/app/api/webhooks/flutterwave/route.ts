@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { verifyFlutterwaveSignature } from "@/features/payment/services/providers/flutterwaveGateway";
-import { processFlutterwaveCallback } from "@/features/payment/services/flutterwaveCallbackService";
 import { log } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
+  const { verifyFlutterwaveSignature } = await import("@/features/payment/services/providers/flutterwaveGateway");
+  const { processFlutterwaveCallback } = await import("@/features/payment/services/flutterwaveCallbackService");
   const signature = request.headers.get("verif-hash");
   if (!verifyFlutterwaveSignature(signature)) {
     log("warn", "Flutterwave webhook signature verification failed", {

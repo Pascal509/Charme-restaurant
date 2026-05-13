@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { loyaltyRedeemSchema } from "@/lib/validation/payloads";
-import { getActiveCart } from "@/features/cart/services/cartService";
-import { validateCartForCheckout } from "@/features/checkout/services/checkoutService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const { getActiveCart } = await import("@/features/cart/services/cartService");
+  const { validateCartForCheckout } = await import("@/features/checkout/services/checkoutService");
   const token = await getToken({
     req: request as NextRequest,
     secret: process.env.NEXTAUTH_SECRET

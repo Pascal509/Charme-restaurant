@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { registerPayloadSchema } from "@/lib/validation/payloads";
-import { registerUser } from "@/features/auth/services/authService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const { registerUser } = await import("@/features/auth/services/authService");
   try {
     const body = await request.json();
     const payload = registerPayloadSchema.parse(body);

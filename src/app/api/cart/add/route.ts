@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { cartService } from "@/features/cart/services/cartService";
 import { addCartItemSchema, cartOwnerSchema } from "@/lib/validation/payloads";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
+  const { cartService } = await import("@/features/cart/services/cartService");
   try {
     const body = await request.json();
     const owner = cartOwnerSchema.parse({

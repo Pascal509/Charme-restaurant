@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { mergeCartSchema } from "@/lib/validation/payloads";
-import { cartService } from "@/features/cart/services/cartService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const { cartService } = await import("@/features/cart/services/cartService");
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

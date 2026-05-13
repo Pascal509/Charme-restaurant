@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { listKitchenOrders, groupKitchenOrdersByStatus } from "@/features/kitchen/services/kitchenService";
-import { getPrimaryRestaurant } from "@/features/restaurant/services/restaurantService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const { listKitchenOrders, groupKitchenOrdersByStatus } = await import("@/features/kitchen/services/kitchenService");
+  const { getPrimaryRestaurant } = await import("@/features/restaurant/services/restaurantService");
   const url = new URL(request.url);
   const restaurantId = url.searchParams.get("restaurantId");
 
