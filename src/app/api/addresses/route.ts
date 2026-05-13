@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAddressSchema } from "@/lib/validation/payloads";
-import { createAddress, listUserAddresses } from "@/features/addresses/services/addressService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,6 +8,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const payload = createAddressSchema.parse(body);
+
+    const { createAddress } = await import("@/features/addresses/services/addressService");
 
     const address = await createAddress({
       userId: payload.userId,
@@ -42,6 +43,8 @@ export async function GET(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: "userId required" }, { status: 400 });
     }
+
+    const { listUserAddresses } = await import("@/features/addresses/services/addressService");
 
     const addresses = await listUserAddresses(userId);
     return NextResponse.json({ addresses });

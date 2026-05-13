@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { idParamSchema } from "@/lib/validation/requests";
 import { updateAddressSchema } from "@/lib/validation/payloads";
-import { updateAddress, deleteAddress } from "@/features/addresses/services/addressService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,6 +10,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     const params = idParamSchema.parse(context.params);
     const body = await request.json();
     const payload = updateAddressSchema.parse(body);
+    const { updateAddress } = await import("@/features/addresses/services/addressService");
 
     const userId = body.userId as string | undefined;
     if (!userId) {
@@ -52,6 +52,8 @@ export async function DELETE(request: Request, context: { params: { id: string }
     if (!userId) {
       return NextResponse.json({ error: "userId required" }, { status: 400 });
     }
+
+    const { deleteAddress } = await import("@/features/addresses/services/addressService");
 
     const address = await deleteAddress({ id: params.id, userId });
     return NextResponse.json({ address });

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { idParamSchema } from "@/lib/validation/requests";
 import { setDefaultAddressSchema } from "@/lib/validation/payloads";
-import { setDefaultAddress } from "@/features/addresses/services/addressService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,6 +10,7 @@ export async function POST(request: Request, context: { params: { id: string } }
     const params = idParamSchema.parse(context.params);
     const body = await request.json();
     const payload = setDefaultAddressSchema.parse(body);
+    const { setDefaultAddress } = await import("@/features/addresses/services/addressService");
 
     const address = await setDefaultAddress({
       id: params.id,
