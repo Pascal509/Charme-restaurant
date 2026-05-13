@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { createMenuItemSchema } from "@/lib/validation/payloads";
-import { createMenuItem } from "@/features/menu/services/adminMenuService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const { createMenuItem } = await import("@/features/menu/services/adminMenuService");
   try {
     const body = await request.json();
     const payload = createMenuItemSchema.parse(body);

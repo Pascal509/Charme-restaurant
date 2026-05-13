@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { prisma } from "@/lib/db";
-import { resolveMenuId } from "@/features/menu/services/adminMenuService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const { prisma } = await import("@/lib/db");
+  const { resolveMenuId } = await import("@/features/menu/services/adminMenuService");
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.sub || token.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

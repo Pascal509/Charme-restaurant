@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { createMenuCategorySchema } from "@/lib/validation/payloads";
-import { createMenuCategory } from "@/features/menu/services/adminMenuService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const { createMenuCategory } = await import("@/features/menu/services/adminMenuService");
   try {
     const body = await request.json();
     const payload = createMenuCategorySchema.parse(body);

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { idParamSchema } from "@/lib/validation/requests";
 import { updateMenuItemSchema } from "@/lib/validation/payloads";
-import { updateMenuItem, deleteMenuItem } from "@/features/menu/services/adminMenuService";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
+  const { updateMenuItem } = await import("@/features/menu/services/adminMenuService");
   try {
     const params = idParamSchema.parse(context.params);
     const body = await request.json();
@@ -32,6 +35,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
 }
 
 export async function DELETE(_request: Request, context: { params: { id: string } }) {
+  const { deleteMenuItem } = await import("@/features/menu/services/adminMenuService");
   try {
     const params = idParamSchema.parse(context.params);
     const item = await deleteMenuItem(params.id);
