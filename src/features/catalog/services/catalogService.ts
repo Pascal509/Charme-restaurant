@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
 import { marketCatalog, menuCatalog } from "@/data/catalog";
 import { resolveMenuImage, resolveProductImage } from "@/lib/image-resolver";
 
@@ -75,10 +74,14 @@ export type CatalogRuntimeStatus = {
   fallbackReason: string | null;
 };
 
+function getConfiguredCatalogSource(): CatalogReadSource {
+  return process.env.CATALOG_READ_SOURCE === "prisma" ? "prisma" : "static";
+}
+
 let staticCatalogService: StaticCatalogService | null = null;
 let prismaCatalogService: PrismaCatalogService | null = null;
-let configuredSource: CatalogReadSource = env.CATALOG_READ_SOURCE;
-let activeSource: CatalogReadSource = env.CATALOG_READ_SOURCE;
+let configuredSource: CatalogReadSource = getConfiguredCatalogSource();
+let activeSource: CatalogReadSource = configuredSource;
 let fallbackActive = false;
 let fallbackReason: string | null = null;
 
@@ -102,7 +105,7 @@ export function getCatalogRuntimeStatus(): CatalogRuntimeStatus {
   };
 }
 
-export function createCatalogService(source: CatalogReadSource = env.CATALOG_READ_SOURCE) {
+export function createCatalogService(source: CatalogReadSource = getConfiguredCatalogSource()) {
   configuredSource = source;
 
   if (source === "prisma") {
