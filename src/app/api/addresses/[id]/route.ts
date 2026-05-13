@@ -3,6 +3,9 @@ import { idParamSchema } from "@/lib/validation/requests";
 import { updateAddressSchema } from "@/lib/validation/payloads";
 import { updateAddress, deleteAddress } from "@/features/addresses/services/addressService";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function PUT(request: Request, context: { params: { id: string } }) {
   try {
     const params = idParamSchema.parse(context.params);
